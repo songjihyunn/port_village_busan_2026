@@ -1,0 +1,141 @@
+파일: src/app/staff/[role]/page.tsx
+설명 대상: 스태프 역할별 상세 페이지 (예: /staff/entrance, /staff/fnb, /staff/market 등)
+
+====================================================================
+1. 개요
+====================================================================
+이 파일은 Next.js의 동적 라우트(Dynamic Route) 페이지로, URL 경로의
+[role] 부분(entrance, fnb, market, popup, stage, facility 중 하나)에
+따라 해당 역할에 맞는 교육 콘텐츠를 보여주는 "역할 상세 페이지"입니다.
+
+상단에 "use client" 선언이 있어 클라이언트 컴포넌트로 동작하며,
+useState/useEffect, localStorage 등 브라우저 API를 사용합니다.
+
+====================================================================
+2. 데이터 구조 (컴포넌트 바깥에 정의된 상수)
+====================================================================
+
+(1) TASK_CARDS
+- 타입: Record<StaffRole, { time, tasks[], caution? }[]>
+- 역할별로 시간대별 업무 목록을 정의.
+  예) entrance(입장통제):
+    - 07:00–08:30 게이트 점검, QR 스캐너 테스트, 바리케이드 설치
+    - 08:30–09:00 스태프 배치 확인, 대기구역 정리
+    - 09:00–13:00 QR 입장 처리, 인원 카운팅 (caution: 수용인원 80%
+      초과 시 운영본부 보고)
+    - 13:00–17:00 피크타임 통제, 추가 게이트 운영
+    - 17:00–22:00 퇴장 관리, 분실물 접수, 최종 인원 집계
+  fnb, market, popup, stage, facility 도 동일한 형태로
+  시간대별 업무/주의사항이 정의되어 있음.
+
+(2) ROUTE_DATA
+- 타입: Record<StaffRole, { title, description, routes[] }>
+- 역할별 "동선" 탭에 표시되는 정보.
+- 각 routes 항목은 { name, path: string[], note? } 구조이며,
+  path 배열은 동선의 각 지점을 순서대로 나열한 것.
+  예) entrance:
+    - 스태프 출입 동선: 주차장 → 게이트 S1 → 유니폼 보관소 → 배치
+    - 관람객 입장 동선: 외부 집결지 → 메인게이트 A1·A2 → 행사장 진입
+    - 비상 대피 동선: 행사장 내부 → 메인게이트 전면 개방 → 외부 광장
+      (note: 화재·비상 시 게이트 전면 개방 후 대피 유도)
+
+====================================================================
+3. 메인 컴포넌트: RoleDetailPage()
+====================================================================
+
+(1) 라우팅/파라미터
+- useParams()로 URL의 role 값을 가져와 roleId(StaffRole)로 사용.
+- ROLE_CONFIGS(=lib/constants)에서 roleId에 해당하는 설정(아이콘,
+  라벨, 구역명 등)을 roleConfig로 조회.
+- 만약 roleId가 ROLE_CONFIGS에 없는 잘못된 값이면 /staff로 리다이렉트.
+
+(2) 상태(State)
+- activeTab: 현재 선택된 탭 ("map" | "route" | "learn" | "quiz")
+- isLearned: 업무학습 완료 여부
+- isMapViewed: 공간탐색(지도) 확인 여부
+- isRouteViewed: 동선 확인 여부
+
+(3) 진행률 저장 (localStorage)
+- localStorage 키 "pv2026_progress"에 역할별 진행 상태를
+  JSON 형태로 저장 ({ [roleId]: { mapViewed, routeViewed, learned } }).
+- useEffect에서 페이지 진입 시:
+  - 저장된 진행률을 읽어와 isLearned/isRouteViewed 초기화
+  - 기본 탭이 "map"이므로, 진입 즉시 mapViewed를 true로 자동 기록
+- markProgress(key) 함수: routeViewed 또는 learned 값을 true로
+  업데이트하고 localStorage에 반영.
+- handleMarkRouteViewed / handleMarkLearned: 각각 "동선 확인 완료",
+  "학습 완료" 버튼 클릭 시 호출되어 진행률 갱신.
+
+(4) 탭 구성 (TABS)
+- 4개 탭: 공간탐색(map), 동선(route), 업무학습(learn), 퀴즈(quiz)
+- 각 탭은 아이콘(lucide-react)과 완료 여부(done)를 가지며,
+  완료된 탭은 초록색으로 강조 표시됨.
+- 퀴즈 탭은 done이 항상 false로 고정(완료 개념 없음).
+
+(5) 헤더 영역
+- 뒤로가기 버튼(/staff로 이동)
+- 역할 아이콘 + 라벨(roleConfig.label) + 구역명(roleConfig.zone)
+- 학습완료 시 우측에 "학습완료" 배지 표시
+- 하단에 4개 탭 버튼 렌더링
+
+(6) 본문(main) - activeTab에 따라 분기 렌더링
+- "map"  → <MapTab />
+- "route" → <RouteTab />
+- "learn" → <LearnTab />
+- "quiz" → 인라인으로 퀴즈 안내 카드 렌더링
+   - "7문항 · 합격 기준 5점 이상" 안내
+   - isLearned가 false면 "업무 학습을 먼저 완료해주세요" 경고
+   - "퀴즈 시작하기" 버튼 → /staff/[roleId]/quiz로 이동
+     (isLearned가 false면 버튼 비활성화)
+
+====================================================================
+4. 하위 컴포넌트
+====================================================================
+
+(1) RouteTab({ roleId, isRouteViewed, onMarkRouteViewed })
+- ROUTE_DATA[roleId]를 가져와 동선 정보를 렌더링.
+- 상단에 title/description 카드.
+- 각 route 항목마다:
+  - 번호 배지 + 동선 이름
+  - path 배열을 세로 타임라인(점 + 연결선) 형태로 표시
+  - note가 있으면 빨간색 경고 박스로 표시
+- 하단 버튼:
+  - 미확인 상태 → "✓ 동선 확인 완료" 버튼 (클릭 시 onMarkRouteViewed 호출)
+  - 확인 완료 상태 → 초록색 완료 안내 박스 표시
+
+(2) MapTab({ roleId, roleConfig })
+- 공간탐색(도면/360° 뷰) 탭.
+- 내부 상태: showPanorama(도면↔360° 뷰 전환), activeHotspot(선택된 핫스팟)
+- 도면 모드:
+  - SVG로 그리드 배경 + 구역 박스(roleConfig.bgColor 기준 색상) +
+    역할명 텍스트 + 입구/출구 박스 렌더링
+  - hotspots 배열(메인 구역/비상 대피구/응급처치 키트, 좌표 x,y%)을
+    SVG 원+아이콘+라벨로 표시. 클릭 시 하단에 설명 카드 표시
+    (info=ℹ️파란색, warning=⚠️주황색, emergency=🚨빨간색)
+- 360° 뷰 모드:
+  - 현재는 Pannellum.js 연동 전 placeholder UI만 표시
+    ("실제 360° 이미지 업로드 후 활성화" 안내)
+- 하단에 범례(정보 포인트/주의 구역/비상 위치) 카드 3개
+
+(3) LearnTab({ roleId, tasks, isLearned, onMarkLearned })
+- 업무학습 탭. props로 받은 tasks(=TASK_CARDS[roleId])를 렌더링.
+- 시간대별 업무를 아코디언(accordion) 형태로 표시
+  - 기본적으로 첫 번째 시간대(tasks[0])가 펼쳐진 상태로 시작
+  - 클릭 시 해당 시간대 펼침/접힘 토글
+  - 펼친 항목 내부: 업무 목록(번호 매김) + caution이 있으면
+    빨간색 경고 박스
+- 하단에 "비상 연락망" 섹션: EMERGENCY_CONTACTS(lib/constants)를
+  2열 그리드로 표시, 클릭 시 tel: 링크로 전화 연결
+- 맨 아래 버튼:
+  - 미완료 → "✓ 학습 완료 확인" 버튼 (클릭 시 onMarkLearned 호출)
+  - 완료 → 초록색 완료 안내 박스 표시
+
+====================================================================
+5. /staff/entrance 접속 시 동작 요약
+====================================================================
+- roleId = "entrance"
+- roleConfig = ROLE_CONFIGS에서 id가 "entrance"인 항목 (입장통제 역할 정보)
+- 기본 탭(map)에서 입장통제 구역 SVG 도면 + 핫스팟 표시
+- "동선" 탭 → ROUTE_DATA.entrance (스태프 출입/관람객 입장/비상 대피 동선)
+- "업무학습" 탭 → TASK_CARDS.entrance (시간대별 입장통제 업무 + 주의사항)
+- "퀴즈" 탭 → 학습 완료 후 /staff/entrance/quiz로 이동 가능

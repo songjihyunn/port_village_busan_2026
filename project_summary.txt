@@ -1,0 +1,1590 @@
+================================================================================
+  포트 빌리지 부산 2026 — 스태프 통합 운영 시스템
+  PROJECT SUMMARY
+  생성일: 2026-06-07
+================================================================================
+
+■ 프로젝트 개요
+  행사명  : 포트 빌리지 부산 2026
+  기술스택: Next.js 14 (App Router) + TypeScript + Tailwind CSS + Supabase
+  구성    : 스태프 교육 시스템(모바일) + 관리자 운영 대시보드(웹)
+
+
+================================================================================
+  전체 프로젝트 구조 트리
+================================================================================
+
+D:\port-village-2026\
+├── package.json
+├── next.config.mjs
+├── tailwind.config.ts
+├── tsconfig.json
+├── postcss.config.mjs
+├── .eslintrc.json
+├── next-env.d.ts
+├── README.md
+├── .gitignore
+└── src\
+    ├── types\
+    │   └── index.ts                        ← 전역 TypeScript 타입/인터페이스 정의
+    ├── lib\
+    │   ├── constants.ts                    ← 전역 정적 데이터 상수
+    │   └── supabase\
+    │       ├── client.ts                   ← 브라우저용 Supabase 클라이언트
+    │       └── server.ts                   ← 서버 컴포넌트용 Supabase 클라이언트
+    ├── app\
+    │   ├── globals.css                     ← 전역 CSS 스타일
+    │   ├── layout.tsx                      ← 루트 레이아웃 (PWA 메타데이터)
+    │   ├── page.tsx                        ← 홈페이지 (/ 경로)
+    │   ├── staff\
+    │   │   ├── layout.tsx                  ← 스태프 섹션 레이아웃 (모바일 max-w-md)
+    │   │   ├── page.tsx                    ← 스태프 홈 (/staff)
+    │   │   └── [role]\
+    │   │       ├── page.tsx                ← 역할 상세 (/staff/[role])
+    │   │       └── quiz\
+    │   │           └── page.tsx            ← 퀴즈 (/staff/[role]/quiz)
+    │   └── admin\
+    │       ├── layout.tsx                  ← 관리자 섹션 레이아웃 (전체 화면)
+    │       └── page.tsx                    ← 관리자 메인 (/admin)
+    └── components\
+        └── admin\
+            ├── AdminNav.tsx                ← 관리자 상단 네비게이션
+            ├── DashboardTab.tsx            ← 실시간 운영 현황 대시보드
+            ├── MapTab.tsx                  ← 행사장 SVG 배치도
+            ├── StaffTab.tsx                ← 스태프 배치 목록
+            ├── TrainingTab.tsx             ← 교육 이수 현황
+            └── ManualTab.tsx               ← 운영 매뉴얼 및 비상 시나리오
+
+
+================================================================================
+  파일별 상세 설명
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+[1] package.json
+────────────────────────────────────────────────────────────────────────────────
+파일명    : package.json
+파일 위치 : D:\port-village-2026\package.json
+파일 역할 : 프로젝트 의존성 목록 및 실행 스크립트 정의
+
+주요 기능
+  - npm 스크립트 4개 정의 (dev/build/start/lint)
+  - 런타임 의존성 및 개발 의존성 관리
+
+파일 내용 상세
+  스크립트:
+    dev   → next dev      (개발 서버 실행)
+    build → next build    (프로덕션 빌드)
+    start → next start    (프로덕션 서버 실행)
+    lint  → next lint     (ESLint 검사)
+
+  런타임 의존성(dependencies):
+    next: 14.2.35                    — Next.js App Router 프레임워크
+    react: ^18                       — React 18
+    react-dom: ^18                   — React DOM 렌더러
+    @supabase/ssr: ^0.10.3           — Supabase SSR 지원 (쿠키 기반 인증)
+    @supabase/supabase-js: ^2.107.0  — Supabase JS 클라이언트 (DB/Realtime)
+    lucide-react: ^1.17.0            — SVG 아이콘 라이브러리
+    tailwind-merge: ^3.6.0           — Tailwind 클래스 충돌 병합 유틸
+    clsx: ^2.1.1                     — 조건부 클래스 조합 유틸
+    date-fns: ^4.4.0                 — 날짜/시간 처리 라이브러리
+    recharts: ^3.8.1                 — React 차트 라이브러리 (향후 확장용, 현재 미사용)
+
+  개발 의존성(devDependencies):
+    typescript: ^5                   — TypeScript 5
+    @types/node, @types/react, @types/react-dom — TypeScript 타입 정의
+    eslint: ^8                       — 린터
+    eslint-config-next              — Next.js ESLint 규칙
+    tailwindcss: ^3.4.1             — Tailwind CSS 3
+    postcss: ^8                     — PostCSS
+    autoprefixer: ^10               — CSS 벤더 프리픽스 자동화
+
+다른 파일과의 연관관계
+  - 프로젝트 전체의 의존성을 관리하며, 모든 소스 파일이 여기 정의된 패키지를 사용
+
+
+────────────────────────────────────────────────────────────────────────────────
+[2] next.config.mjs
+────────────────────────────────────────────────────────────────────────────────
+파일명    : next.config.mjs
+파일 위치 : D:\port-village-2026\next.config.mjs
+파일 역할 : Next.js 빌드 및 런타임 설정
+
+주요 기능
+  - 이미지 최적화 설정
+  - ESLint/TypeScript 빌드 동작 설정
+
+파일 내용 상세
+  nextConfig 객체:
+    images.remotePatterns: []        — 외부 이미지 도메인 허용 없음 (로컬 이미지만 사용)
+    eslint.ignoreDuringBuilds: true  — 빌드 시 ESLint 오류 무시 (빌드 속도 우선)
+    typescript.ignoreBuildErrors: false — TypeScript 타입 오류 시 빌드 실패 처리
+
+다른 파일과의 연관관계
+  - Next.js 빌드 파이프라인 전반에 적용
+
+
+────────────────────────────────────────────────────────────────────────────────
+[3] tailwind.config.ts
+────────────────────────────────────────────────────────────────────────────────
+파일명    : tailwind.config.ts
+파일 위치 : D:\port-village-2026\tailwind.config.ts
+파일 역할 : Tailwind CSS 디자인 시스템(토큰) 정의
+
+주요 기능
+  - 프로젝트 전용 컬러 팔레트 확장
+  - 커스텀 폰트, 애니메이션, 키프레임 정의
+  - Tailwind가 스캔할 소스 파일 경로 설정
+
+파일 내용 상세
+  content 경로:
+    ./src/pages/**/*.{js,ts,jsx,tsx,mdx}
+    ./src/components/**/*.{js,ts,jsx,tsx,mdx}
+    ./src/app/**/*.{js,ts,jsx,tsx,mdx}
+
+  커스텀 컬러(theme.extend.colors):
+    navy (짙은 해군 파란색 — 주 배경):
+      navy-50:  #eef2ff
+      navy-100: #dde6ff
+      navy-200: #c0ceff
+      navy-300: #93abff
+      navy-400: #607eff
+      navy-500: #3b55f5
+      navy-600: #2434e1
+      navy-700: #1b27c5
+      navy-800: #1a24a1
+      navy-900: #0B1628   ← 주 배경색
+      navy-950: #07101d
+
+    amber (금/앰버 — 주 강조색):
+      amber-50:  #fffbeb
+      amber-100: #fef3c7
+      amber-200: #fde68a
+      amber-300: #fcd34d
+      amber-400: #F4A72A  ← 주 강조색 (버튼, 아이콘 등)
+      amber-500: #f59e0b
+      amber-600: #d97706
+      amber-700: #b45309
+      amber-800: #92400e
+      amber-900: #78350f
+
+    ocean (바다 청록 — 보조 강조색):
+      ocean-400: #1a8fb0
+      ocean-500: #2596b4  ← 보조 강조색
+      ocean-600: #1c7a9a
+
+  커스텀 폰트:
+    fontFamily.sans: ['Noto Sans KR', ...defaultTheme.fontFamily.sans]
+
+  커스텀 애니메이션:
+    pulse-slow: pulse 3s ease-in-out infinite
+    fade-in:    fadeIn 0.5s ease-out forwards
+    slide-up:   slideUp 0.5s ease-out forwards
+
+  커스텀 키프레임:
+    fadeIn:  { from: opacity 0 → to: opacity 1 }
+    slideUp: { from: translateY(20px) + opacity 0 → to: translateY(0) + opacity 1 }
+
+다른 파일과의 연관관계
+  - globals.css와 함께 전체 UI 스타일의 기반
+  - 모든 컴포넌트/페이지에서 Tailwind 클래스명으로 참조
+
+
+────────────────────────────────────────────────────────────────────────────────
+[4] tsconfig.json
+────────────────────────────────────────────────────────────────────────────────
+파일명    : tsconfig.json
+파일 위치 : D:\port-village-2026\tsconfig.json
+파일 역할 : TypeScript 컴파일러 설정
+
+주요 기능
+  - TypeScript 엄격 모드 활성화
+  - 경로 별칭(@/) 정의
+
+파일 내용 상세
+  compilerOptions:
+    target: "ES2017"
+    lib: ["dom", "dom.iterable", "esnext"]
+    allowJs: true
+    skipLibCheck: true
+    strict: true                    — 엄격 모드 (null 체크, 타입 엄격성)
+    noEmit: true                    — 출력 파일 생성 안 함 (Next.js가 처리)
+    esModuleInterop: true
+    module: "esnext"
+    moduleResolution: "bundler"     — 번들러 방식 모듈 해석
+    resolveJsonModule: true
+    isolatedModules: true
+    jsx: "preserve"                 — JSX 보존 (Next.js가 변환)
+    incremental: true
+    plugins: [{ name: "next" }]
+    paths: { "@/*": ["./src/*"] }   — @/로 src/ 폴더 접근 가능
+
+다른 파일과의 연관관계
+  - 모든 .ts/.tsx 파일의 타입 검사 기준
+  - @/ 별칭은 모든 import 경로에서 사용
+
+
+────────────────────────────────────────────────────────────────────────────────
+[5] postcss.config.mjs
+────────────────────────────────────────────────────────────────────────────────
+파일명    : postcss.config.mjs
+파일 위치 : D:\port-village-2026\postcss.config.mjs
+파일 역할 : PostCSS 플러그인 설정
+
+파일 내용 상세
+  plugins:
+    tailwindcss  — Tailwind CSS 처리
+    autoprefixer — CSS 벤더 프리픽스 자동 추가
+
+다른 파일과의 연관관계
+  - globals.css 처리 시 Tailwind 지시자(@tailwind)를 실제 CSS로 변환
+
+
+────────────────────────────────────────────────────────────────────────────────
+[6] .eslintrc.json
+────────────────────────────────────────────────────────────────────────────────
+파일명    : .eslintrc.json
+파일 위치 : D:\port-village-2026\.eslintrc.json
+파일 역할 : ESLint 코드 품질 검사 설정
+
+파일 내용 상세
+  extends:
+    next/core-web-vitals  — Next.js 권장 규칙 + Core Web Vitals 최적화 규칙
+    next/typescript       — TypeScript 전용 Next.js 규칙
+
+다른 파일과의 연관관계
+  - 모든 .ts/.tsx 파일에 적용 (next lint 명령 실행 시)
+
+
+────────────────────────────────────────────────────────────────────────────────
+[7] src/types/index.ts
+────────────────────────────────────────────────────────────────────────────────
+파일명    : index.ts
+파일 위치 : D:\port-village-2026\src\types\index.ts
+파일 역할 : 프로젝트 전역 TypeScript 타입 및 인터페이스 정의 파일
+
+주요 기능
+  - DB 테이블 구조를 반영한 인터페이스 정의
+  - 컴포넌트 간 공유되는 데이터 구조 타입 선언
+
+파일 내용 상세
+
+  타입(type):
+    StaffRole
+      = "entrance" | "fnb" | "market" | "popup" | "stage" | "facility"
+      — 스태프가 담당할 수 있는 역할 6종을 나타내는 유니언 타입
+
+  인터페이스(interface):
+
+    RoleConfig
+      id          : StaffRole    — 역할 식별자
+      label       : string       — 한글 역할명 (예: "입장통제")
+      icon        : string       — 이모지 아이콘
+      color       : string       — Tailwind 텍스트 색상 클래스
+      bgColor     : string       — Tailwind 배경 색상 클래스
+      description : string       — 역할 설명 텍스트
+      zone        : string       — 담당 구역명
+
+    Staff
+      id                : string
+      name              : string        — 스태프 이름
+      phone             : string        — 연락처
+      role              : StaffRole     — 담당 역할
+      zone              : string        — 배치 구역
+      shift_start       : string        — 교대 시작 시간 (HH:mm 형식)
+      shift_end         : string        — 교대 종료 시간
+      is_trained        : boolean       — 교육 이수 여부
+      quiz_score        : number | null — 퀴즈 점수
+      quiz_completed_at : string | null — 퀴즈 완료 시각 (ISO 8601)
+      created_at        : string        — 레코드 생성 시각
+
+    QuizResult
+      id           : string
+      staff_id     : string         — 연결된 스태프 ID (FK)
+      role         : StaffRole      — 퀴즈를 수행한 역할
+      score        : number         — 획득 점수
+      total        : number         — 전체 문항 수
+      answers      : QuizAnswer[]   — 문항별 답변 배열
+      completed_at : string         — 완료 시각
+
+    QuizAnswer
+      question_id : number          — 문항 번호
+      selected    : string | boolean — 선택한 답 (객관식 문자, OX는 boolean)
+      correct     : boolean         — 정답 여부
+
+    ZoneCongestion
+      id            : string
+      zone_id       : string        — 구역 식별자 (A~F)
+      zone_name     : string        — 구역 한글명
+      current_count : number        — 현재 인원 수
+      capacity      : number        — 수용 가능 인원
+      level         : "low" | "medium" | "high" | "critical"  — 혼잡도 단계
+      updated_at    : string        — 최종 업데이트 시각
+
+    Alert
+      id          : string
+      type        : "emergency" | "warning" | "info"  — 알림 유형
+      zone_id     : string | null   — 관련 구역 (없을 수 있음)
+      message     : string          — 알림 메시지
+      is_resolved : boolean         — 해결 여부
+      created_at  : string          — 생성 시각
+      resolved_at : string | null   — 해결 시각
+
+    TrainingNotification
+      id       : string
+      staff_id : string   — 대상 스태프 ID
+      message  : string   — 발송 메시지
+      sent_at  : string   — 발송 시각
+
+    ChecklistItem
+      id       : string
+      category : string             — 체크리스트 카테고리
+      task     : string             — 작업 내용
+      is_done  : boolean            — 완료 여부
+      done_by  : string | null      — 완료 처리자
+      done_at  : string | null      — 완료 시각
+
+    QuizQuestion
+      id          : number
+      type        : "ox" | "multiple"   — OX형 또는 4지선다형
+      question    : string              — 문제 텍스트
+      options     ?: string[]           — 객관식 보기 (multiple 타입만)
+      answer      : string | boolean    — 정답 (객관식: "A"~"D", OX: true/false)
+      explanation : string              — 해설 텍스트
+      scenario    ?: string             — 상황 설명 (선택)
+
+    Zone
+      id         : string       — 구역 ID (A~F)
+      name       : string       — 구역 한글명
+      svgPath    : string       — SVG path 데이터
+      color      : string       — SVG 채색 색상
+      center     : { x: number; y: number }  — SVG 중심 좌표
+      staffCount : number       — 배치 스태프 수
+      capacity   : number       — 수용 인원
+      role       : StaffRole    — 담당 역할
+
+    Hotspot
+      id           : string
+      zoneId       : string     — 속한 구역 ID
+      x            : number     — SVG X 좌표
+      y            : number     — SVG Y 좌표
+      label        : string     — 표시 레이블
+      description  : string     — 설명 텍스트
+      type         : "info" | "warning" | "emergency"  — 핫스팟 유형
+      panoramaUrl ?: string     — 360° 이미지 URL (옵션)
+
+    TimelineEvent
+      time        : string      — 이벤트 시각 (예: "07:00")
+      title       : string      — 이벤트 제목
+      description : string      — 이벤트 설명
+      type        : "setup" | "open" | "event" | "close"  — 이벤트 유형
+
+다른 파일과의 연관관계
+  - constants.ts, 모든 컴포넌트/페이지 파일에서 import하여 사용
+  - Supabase DB 스키마와 1:1 매핑
+
+
+────────────────────────────────────────────────────────────────────────────────
+[8] src/lib/constants.ts
+────────────────────────────────────────────────────────────────────────────────
+파일명    : constants.ts
+파일 위치 : D:\port-village-2026\src\lib\constants.ts
+파일 역할 : 앱 전체에서 공유하는 정적 데이터 상수 모음
+
+주요 기능
+  - 역할 설정, 퀴즈 문제, 비상 연락망, 타임라인, 구역 정보를 중앙 관리
+
+파일 내용 상세
+
+  ROLE_CONFIGS: RoleConfig[]
+    6개 역할 설정 배열:
+    - entrance  : "입장통제" — 메인 게이트 구역, 앰버 컬러
+    - fnb       : "F&B"     — 푸드코트 구역, 주황 컬러
+    - market    : "마켓"    — 마켓 플레이스 구역, 초록 컬러
+    - popup     : "팝업"    — 팝업 존 구역, 보라 컬러
+    - stage     : "무대"    — 메인 스테이지 구역, 파랑 컬러
+    - facility  : "편의시설" — 편의시설 구역, 하늘색 컬러
+    각 항목에 id, label, icon(이모지), color, bgColor, description, zone 포함
+
+  QUIZ_QUESTIONS: Record<StaffRole, QuizQuestion[]>
+    역할별 퀴즈 문제 (각 역할당 7문항, 총 42문항):
+    - 문제 유형: OX형(answer: true/false) + 4지선다형(answer: "A"~"D")
+    - 각 문제에 id, type, question, options(객관식만), answer, explanation, scenario(선택) 포함
+    - 돌발상황 대응, 안전 절차, 역할별 업무 지식을 묻는 문제들로 구성
+
+  EMERGENCY_CONTACTS: { name: string; ext: string }[]
+    9개 비상 연락망:
+    운영본부(#100), 안전팀(#101), 의료팀(#102), 경비팀(#103),
+    시설팀(#104), F&B팀(#105), 안내팀(#106), 교통팀(#107), 방송팀(#108)
+
+  TIMELINE_EVENTS: TimelineEvent[]
+    11개 행사 당일 운영 타임라인 이벤트:
+    07:00 스태프 집결 및 브리핑(setup) → 08:00 구역별 최종 점검(setup) →
+    09:00 행사장 오픈(open) → 10:00 메인 프로그램 시작(event) →
+    12:00 점심 교대(event) → 14:00 오후 프로그램(event) →
+    16:00 하이라이트 공연(event) → 18:00 저녁 교대(event) →
+    19:00 나이트 마켓 오픈(event) → 21:00 피날레 공연(event) →
+    22:00 행사장 폐쇄(close)
+
+  ZONES: { id, name, role, capacity, color }[]
+    6개 구역 정보:
+    A: 메인 게이트(entrance, 수용 500명, 앰버)
+    B: 푸드코트(fnb, 수용 300명, 주황)
+    C: 마켓 플레이스(market, 수용 400명, 초록)
+    D: 팝업 존(popup, 수용 200명, 보라)
+    E: 메인 스테이지(stage, 수용 800명, 파랑)
+    F: 편의시설(facility, 수용 150명, 하늘)
+
+다른 파일과의 연관관계
+  - ROLE_CONFIGS: staff/page.tsx, staff/[role]/page.tsx, DashboardTab.tsx, MapTab.tsx, StaffTab.tsx, TrainingTab.tsx
+  - QUIZ_QUESTIONS: quiz/page.tsx
+  - EMERGENCY_CONTACTS: staff/[role]/page.tsx (LearnTab), ManualTab.tsx
+  - TIMELINE_EVENTS: DashboardTab.tsx
+  - ZONES: DashboardTab.tsx, MapTab.tsx, StaffTab.tsx
+
+
+────────────────────────────────────────────────────────────────────────────────
+[9] src/lib/supabase/client.ts
+────────────────────────────────────────────────────────────────────────────────
+파일명    : client.ts
+파일 위치 : D:\port-village-2026\src\lib\supabase\client.ts
+파일 역할 : 브라우저(클라이언트 사이드) Supabase 클라이언트 인스턴스 생성
+
+주요 기능
+  - Client Component에서 Supabase DB 쿼리 및 Realtime 구독에 사용
+
+파일 내용 상세
+  함수:
+    createClient()
+      - @supabase/ssr의 createBrowserClient 사용
+      - 환경변수:
+          NEXT_PUBLIC_SUPABASE_URL      — Supabase 프로젝트 URL
+          NEXT_PUBLIC_SUPABASE_ANON_KEY — 공개 익명 키
+      - 반환: Supabase 클라이언트 인스턴스
+
+다른 파일과의 연관관계
+  - DashboardTab.tsx: zone_congestion, alerts, checklist_items 쿼리 및 Realtime 구독
+  - StaffTab.tsx: staff 테이블 SELECT
+  - TrainingTab.tsx: staff Realtime 구독, training_notifications INSERT
+  - quiz/page.tsx: quiz_results INSERT
+
+
+────────────────────────────────────────────────────────────────────────────────
+[10] src/lib/supabase/server.ts
+────────────────────────────────────────────────────────────────────────────────
+파일명    : server.ts
+파일 위치 : D:\port-village-2026\src\lib\supabase\server.ts
+파일 역할 : 서버 컴포넌트용 Supabase 클라이언트 생성 (쿠키 기반 세션 관리)
+
+주요 기능
+  - Server Component, Route Handler, Server Action에서 인증된 Supabase 요청에 사용
+  - 쿠키를 통한 세션 토큰 관리
+
+파일 내용 상세
+  함수:
+    createClient()
+      - next/headers의 cookies() 사용
+      - @supabase/ssr의 createServerClient 사용
+      - cookieOptions:
+          getAll(): 모든 쿠키 반환
+          setAll(cookiesToSet): 쿠키 설정 (try/catch로 에러 무시 — Server Component는 쿠키 쓰기 불가)
+      - 환경변수:
+          NEXT_PUBLIC_SUPABASE_URL
+          NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+다른 파일과의 연관관계
+  - 현재 직접 import하는 파일 없음 (향후 Server Component 또는 Route Handler에서 사용 예정)
+  - client.ts와 쌍으로, 서버/클라이언트 렌더링 컨텍스트에 따라 선택 사용
+
+
+────────────────────────────────────────────────────────────────────────────────
+[11] src/app/globals.css
+────────────────────────────────────────────────────────────────────────────────
+파일명    : globals.css
+파일 위치 : D:\port-village-2026\src\app\globals.css
+파일 역할 : 전역 CSS 스타일 정의 — Tailwind 기반 + 커스텀 컴포넌트 스타일
+
+주요 기능
+  - Tailwind CSS 레이어 로드
+  - 구글 폰트 Noto Sans KR 적용
+  - 앱 전체 베이스 스타일 (배경, 텍스트, 스크롤바)
+  - 커스텀 유틸리티 클래스 정의
+
+파일 내용 상세
+  @import:
+    Google Fonts — Noto Sans KR (weight 300, 400, 500, 600, 700, 800)
+
+  Tailwind 레이어:
+    @tailwind base
+    @tailwind components
+    @tailwind utilities
+
+  CSS 변수(--변수명):
+    --navy-900: #0B1628
+    --amber-400: #F4A72A
+    --ocean-500: #2596b4
+
+  기본(base) 스타일:
+    body:
+      background-color: #0B1628 (navy-900)
+      color: #e2e8f0 (slate-200)
+      font-family: Noto Sans KR
+    * { box-sizing: border-box }
+
+  커스텀 스크롤바:
+    ::-webkit-scrollbar         width: 6px
+    ::-webkit-scrollbar-track   background: #0e2247
+    ::-webkit-scrollbar-thumb   background: #2b5b9f, border-radius: 3px
+    ::-webkit-scrollbar-thumb:hover  background: #F4A72A (앰버 강조)
+
+  @keyframes:
+    progress-fill: CSS 변수 --progress (0%→설정값) 기반 너비 애니메이션
+
+  커스텀 클래스:
+    .progress-bar
+      height: 100%, border-radius: full
+      animation: progress-fill 1s ease-out forwards
+
+    .card-glow:hover
+      box-shadow: 0 0 20px rgba(244, 167, 42, 0.3) (앰버 글로우)
+
+    #panorama
+      width: 100%, height: 300px
+      background: #0B1628 (Pannellum.js 360° 뷰어 컨테이너)
+
+  @layer utilities:
+    .text-balance  { text-wrap: balance }
+    .glass         { background: rgba(255,255,255,0.05), backdrop-filter: blur(10px), border: 1px solid rgba(255,255,255,0.1) }
+    .glass-dark    { background: rgba(0,0,0,0.3), backdrop-filter: blur(10px), border: 1px solid rgba(255,255,255,0.05) }
+
+다른 파일과의 연관관계
+  - layout.tsx에서 import하여 전체 앱에 적용
+  - tailwind.config.ts의 커스텀 토큰과 함께 디자인 시스템 구성
+
+
+────────────────────────────────────────────────────────────────────────────────
+[12] src/app/layout.tsx (루트 레이아웃)
+────────────────────────────────────────────────────────────────────────────────
+파일명    : layout.tsx
+파일 위치 : D:\port-village-2026\src\app\layout.tsx
+파일 역할 : Next.js App Router 전역 루트 레이아웃 — 모든 페이지의 공통 HTML 껍데기
+
+주요 기능
+  - PWA 메타데이터 설정
+  - 구글 폰트 로드
+  - 전역 스타일(globals.css) 적용
+  - 모바일 뷰포트 최적화
+
+파일 내용 상세
+  export const metadata: Metadata
+    title       : "포트 빌리지 부산 2026 — 스태프 시스템"
+    description : 행사 스태프 운영 시스템 설명
+    manifest    : "/manifest.json" (PWA 매니페스트 참조)
+
+  export const viewport: Viewport
+    width           : "device-width"
+    initialScale    : 1
+    maximumScale    : 1
+    themeColor      : "#0B1628"
+
+  JSX 구조:
+    <html lang="ko">
+      <head>
+        <!-- Google Fonts preconnect -->
+        <!-- Noto Sans KR stylesheet link -->
+      </head>
+      <body className="antialiased bg-navy-900 text-slate-100 min-h-screen">
+        {children}
+      </body>
+    </html>
+
+다른 파일과의 연관관계
+  - globals.css import
+  - 모든 페이지(page.tsx)와 레이아웃의 최상위 부모
+
+
+────────────────────────────────────────────────────────────────────────────────
+[13] src/app/page.tsx (홈페이지)
+────────────────────────────────────────────────────────────────────────────────
+파일명    : page.tsx
+파일 위치 : D:\port-village-2026\src\app\page.tsx
+파일 역할 : 루트 경로(/) 홈페이지 — 스태프 교육과 관리자 운영 두 영역으로 진입하는 랜딩 페이지
+
+주요 기능
+  - 앱 진입점으로 /staff 와 /admin 두 경로로 분기
+  - 브랜드 비주얼(파도 배경 애니메이션, 로고) 제공
+
+파일 내용 상세
+  컴포넌트: HomePage (Client Component, "use client")
+
+  사용 아이콘 (lucide-react):
+    Anchor, Shield, LayoutDashboard, ChevronRight, Waves
+
+  JSX 구조:
+    <main className="relative min-h-screen overflow-hidden">
+
+      배경 SVG 파도 애니메이션:
+        파도1 — 앰버색(#F4A72A), 낮은 opacity, 느린 pulse 애니메이션
+        파도2 — 청록색(#2596b4), 더 낮은 opacity, 다른 위상
+
+      헤더:
+        Anchor 아이콘 (앰버, w-10 h-10)
+        "Port Village Busan" 텍스트 (slate-300)
+
+      제목:
+        <h1>"포트 빌리지 <span className="text-amber-400">2026</span>"</h1>
+        부제목 — "행사 스태프 통합 운영 시스템"
+
+      카드 링크 2개 (Next.js Link):
+        1. /staff — "스태프 교육" (Shield 아이콘, amber 테마, "모바일 최적화")
+           - 호버: amber glow shadow, scale 1.02
+        2. /admin — "관리자 운영" (LayoutDashboard 아이콘, ocean 테마, "웹 대시보드")
+           - 호버: ocean glow shadow, scale 1.02
+
+다른 파일과의 연관관계
+  - Next.js Link → /staff (staff/page.tsx), /admin (admin/page.tsx)
+  - lucide-react 아이콘 사용
+
+
+────────────────────────────────────────────────────────────────────────────────
+[14] src/app/staff/layout.tsx
+────────────────────────────────────────────────────────────────────────────────
+파일명    : layout.tsx
+파일 위치 : D:\port-village-2026\src\app\staff\layout.tsx
+파일 역할 : 스태프 교육 섹션(/staff/*) 공통 레이아웃
+
+주요 기능
+  - 스태프 페이지 전용 메타데이터 설정
+  - 모바일 최적화 최대 너비 컨테이너 적용
+
+파일 내용 상세
+  export const metadata: Metadata
+    title: "스태프 교육 | 포트 빌리지 2026"
+
+  JSX 구조:
+    <div className="min-h-screen bg-[#0B1628] max-w-md mx-auto relative">
+      {children}
+    </div>
+    — max-w-md (448px) 중앙 정렬로 모바일 UI 고정폭 구현
+
+다른 파일과의 연관관계
+  - staff/page.tsx, staff/[role]/page.tsx, staff/[role]/quiz/page.tsx의 부모 레이아웃
+
+
+────────────────────────────────────────────────────────────────────────────────
+[15] src/app/staff/page.tsx (스태프 홈)
+────────────────────────────────────────────────────────────────────────────────
+파일명    : page.tsx
+파일 위치 : D:\port-village-2026\src\app\staff\page.tsx
+파일 역할 : /staff 경로 — 역할 선택 목록 및 전체 교육 진행률 표시
+
+주요 기능
+  - localStorage에서 역할별 학습/퀴즈 완료 상태 로드
+  - 전체 교육 이수율 프로그레스바 표시
+  - 역할 카드 목록으로 상세 페이지 진입
+
+파일 내용 상세
+  컴포넌트: StaffHomePage (Client Component)
+
+  타입:
+    ProgressData: { [roleId: string]: { learned: boolean; quizPassed: boolean } }
+
+  상태(useState):
+    progress      : ProgressData     — 역할별 진행 상태
+    totalProgress : number           — 전체 완료율 (0~100)
+
+  함수:
+    useEffect()
+      - localStorage.getItem('pv2026_progress') 파싱
+      - 완료 역할 수 계산: learned AND quizPassed 둘 다 true인 역할 수 / 전체 역할 수 × 100
+
+  JSX 구조:
+    헤더:
+      Anchor 아이콘 + "포트 빌리지 2026" 제목
+      전체 교육 이수율 프로그레스바 (앰버 그라디언트, 퍼센트 숫자 표시)
+
+    역할 카드 목록 (ROLE_CONFIGS.map):
+      각 카드 → /staff/[role.id] 링크
+      왼쪽: 역할 아이콘(이모지) + 이름 + 구역
+      오른쪽: 학습완료 배지(초록) + 퀴즈완료 배지(초록) + 완료 시 CheckCircle 아이콘
+      활성: border-amber-400/50, 미완: border-white/10
+
+    하단 공지:
+      "행사 당일 전까지 모든 역할 교육을 완료해주세요"
+
+  사용 아이콘: Anchor, CheckCircle, ChevronRight, Shield (lucide-react)
+
+다른 파일과의 연관관계
+  - constants.ts: ROLE_CONFIGS 사용
+  - types/index.ts: StaffRole 타입 사용
+  - localStorage: 'pv2026_progress' 키 읽기
+  - staff/[role]/page.tsx: 각 역할 카드 클릭 시 이동
+
+
+────────────────────────────────────────────────────────────────────────────────
+[16] src/app/staff/[role]/page.tsx (역할 상세)
+────────────────────────────────────────────────────────────────────────────────
+파일명    : page.tsx
+파일 위치 : D:\port-village-2026\src\app\staff\[role]\page.tsx
+파일 역할 : /staff/[role] 경로 — 특정 역할의 공간탐색/업무학습/퀴즈 3탭 상세 페이지
+
+주요 기능
+  - 역할별 업무 시간대별 아코디언 학습
+  - SVG 기반 인터랙티브 공간 탐색 지도
+  - 학습 완료 상태 localStorage 저장
+  - 퀴즈 페이지 진입 (학습 완료 후 활성화)
+
+파일 내용 상세
+  컴포넌트: RoleDetailPage (Client Component)
+  내부 컴포넌트: MapTab, LearnTab
+
+  타입:
+    Tab: "map" | "learn" | "quiz"
+
+  상수 TASK_CARDS: Record<StaffRole, TimeBlock[]>
+    TimeBlock: { time: string; title: string; tasks: string[]; caution?: string }
+    6개 역할 × 5개 시간대 블록 (07:00~22:00)
+    caution 필드: 주의 사항 (빨간 경고로 표시, 일부 시간대만)
+
+  상태:
+    activeTab  : Tab      — 현재 탭 (기본값 "learn")
+    isLearned  : boolean  — 학습 완료 여부
+
+  함수:
+    useEffect()
+      — localStorage 'pv2026_progress'에서 해당 역할의 learned 상태 로드
+
+    handleMarkLearned()
+      — localStorage 'pv2026_progress' 업데이트: { [roleId]: { ...prev, learned: true } }
+
+  탭 버튼 3개:
+    Map 아이콘 "공간 탐색" | BookOpen 아이콘 "업무 학습" | HelpCircle 아이콘 "퀴즈"
+    활성 탭: border-amber-400 텍스트 앰버
+
+  하위 컴포넌트 MapTab:
+    props: roleId, roleConfig
+    상태:
+      showPanorama    : boolean     — 360° 뷰어 표시 여부
+      activeHotspot   : Hotspot | null  — 클릭된 핫스팟
+
+    SVG 지도 (viewBox="0 0 400 300"):
+      - 그리드 패턴 (30px 간격, navy-700 색상)
+      - 파란 배경 사각형
+      - 역할별 구역 사각형 (roleConfig.bgColor 기반)
+      - 핫스팟 3개 원 버튼:
+          "메인 구역"(info, 50,150) — 파랑 원 + Info 아이콘
+          "비상 대피구"(warning, 320,80) — 앰버 원 + AlertTriangle 아이콘
+          "응급처치 키트"(emergency, 200,230) — 빨강 원 + Heart 아이콘
+      - 클릭 시 팝업 박스 표시 (제목 + 설명)
+      - 360° 뷰 버튼 (Panorama 아이콘, 플레이스홀더 — Pannellum.js 연동 예정)
+      - 범례: 정보(파랑)/주의(앰버)/비상(빨강)
+
+  하위 컴포넌트 LearnTab:
+    props: roleId, tasks(TimeBlock[]), isLearned, onMarkLearned
+
+    상태:
+      expandedTime: string | null  — 펼쳐진 시간대 ID
+
+    시간대 아코디언:
+      TASK_CARDS[roleId] 순회
+      클릭 시 expandedTime 토글
+      펼쳐지면: tasks 목록(CheckCircle 아이콘) + caution 빨간 경고 박스
+
+    비상 연락망 섹션:
+      EMERGENCY_CONTACTS 2열 그리드
+      각 항목: Phone 아이콘 + 이름 + 내선번호 + "tel:" 링크 버튼
+
+    학습 완료 버튼:
+      isLearned=false: "학습 완료 표시" 버튼 → onMarkLearned() 호출
+      isLearned=true: CheckCircle 아이콘 + "학습 완료!" 안내 + 퀴즈 링크
+
+  퀴즈 탭:
+    isLearned=true: /staff/[role]/quiz 링크 버튼 (활성)
+    isLearned=false: 버튼 비활성화, "업무 학습을 먼저 완료해주세요" 안내
+
+  사용 아이콘: MapPin, BookOpen, HelpCircle, Map, ChevronLeft, ChevronRight,
+               CheckCircle, AlertTriangle, Heart, Phone, Info, Panorama
+
+다른 파일과의 연관관계
+  - constants.ts: ROLE_CONFIGS, EMERGENCY_CONTACTS, TIMELINE_EVENTS
+  - types/index.ts: StaffRole, RoleConfig, Hotspot
+  - localStorage: 'pv2026_progress' 읽기/쓰기
+  - quiz/page.tsx: 퀴즈 탭에서 Link로 연결
+
+
+────────────────────────────────────────────────────────────────────────────────
+[17] src/app/staff/[role]/quiz/page.tsx (퀴즈)
+────────────────────────────────────────────────────────────────────────────────
+파일명    : page.tsx
+파일 위치 : D:\port-village-2026\src\app\staff\[role]\quiz\page.tsx
+파일 역할 : /staff/[role]/quiz — 역할별 돌발상황 대응 퀴즈 (7문항, 합격선 5점)
+
+주요 기능
+  - OX형/4지선다형 문제 순차 진행
+  - 답변 즉시 피드백(정답/오답 + 해설)
+  - Supabase quiz_results 테이블에 결과 저장
+  - 합격 여부에 따라 localStorage pv2026_progress 업데이트
+
+파일 내용 상세
+  컴포넌트: QuizPage (메인, Client Component)
+  내부 컴포넌트: IntroScreen, QuizScreen, ResultScreen
+
+  타입:
+    QuizState: "intro" | "playing" | "result"
+
+  상태:
+    state       : QuizState              — 현재 단계
+    currentQ    : number                 — 현재 문항 인덱스 (0-based)
+    answers     : {selected, correct}[]  — 답변 누적 배열
+    showFeedback: boolean                — 피드백 표시 여부
+    lastSelected: string | boolean | null — 마지막 선택값
+    score       : number                 — 현재까지 획득 점수
+
+  파생 데이터:
+    questions   — QUIZ_QUESTIONS[role] (역할별 7문항)
+    roleConfig  — ROLE_CONFIGS.find(r => r.id === role)
+
+  함수:
+    handleAnswer(selected: string | boolean)
+      - 현재 문항의 정답과 비교
+      - answers 배열에 { selected, correct } 추가
+      - 정답이면 score + 1
+      - showFeedback = true, lastSelected 저장
+
+    handleNext()
+      - showFeedback = false 초기화
+      - 마지막 문항이 아니면: currentQ + 1
+      - 마지막 문항이면:
+          1. Supabase quiz_results INSERT:
+             { role, score, total: questions.length, answers }
+          2. localStorage 'pv2026_progress' 업데이트:
+             quizPassed: (최종점수 >= 5)
+          3. state = "result"
+
+    handleRestart()
+      - 모든 상태 초기화 → state = "intro"
+
+  IntroScreen:
+    역할 아이콘(이모지) + 역할명
+    정보 카드 3개:
+      문항 수(7), 문제 유형("OX + 객관식"), 합격 기준("7점 만점 중 5점")
+    안내 문구 리스트 (주의사항)
+    "퀴즈 시작" 버튼
+
+  QuizScreen:
+    헤더: 역할명 + 현재 문항/전체(currentQ+1/7) 프로그레스바
+
+    OX형 (type === "ox"):
+      "O" 버튼 (초록) + "X" 버튼 (빨강)
+      선택 후: 정답 버튼 초록 border, 오답 버튼 빨강 border
+
+    4지선다형 (type === "multiple"):
+      A/B/C/D 4개 버튼 리스트
+      선택 후: 정답 초록, 오답 빨강 강조
+
+    피드백 박스 (showFeedback=true):
+      정답: CheckCircle 초록 아이콘 + "정답입니다!" + 해설
+      오답: XCircle 빨강 아이콘 + "오답입니다!" + 정답 + 해설
+      "다음 문항" 버튼 (또는 마지막 문항 시 "결과 보기")
+
+    scenario 있을 시: 상황 설명 박스 (노란 배경, AlertTriangle 아이콘)
+
+  ResultScreen:
+    합격 (score >= 5):
+      Trophy 아이콘 + "수료 완료!" 제목 (앰버/금색 카드)
+      "역할 배치에 반영됩니다" 메시지
+    불합격:
+      XCircle 아이콘 + "아쉽습니다" (빨강 카드)
+      "다시 도전해 보세요" 메시지
+
+    점수 표시: "score / 7점" + 정답률(%)
+
+    문항별 결과 리스트:
+      각 문항: CheckCircle(정답) 또는 XCircle(오답) + 문제 텍스트 앞 20자
+
+    버튼:
+      "다시 풀기" → handleRestart()
+      "홈으로"   → /staff 링크
+
+  Supabase 쿼리:
+    테이블: quiz_results
+    작업: INSERT
+    데이터: { role, score, total, answers }
+
+  사용 아이콘: Trophy, CheckCircle, XCircle, AlertTriangle, ChevronLeft
+
+다른 파일과의 연관관계
+  - constants.ts: QUIZ_QUESTIONS, ROLE_CONFIGS
+  - lib/supabase/client.ts: quiz_results INSERT
+  - types/index.ts: QuizQuestion, StaffRole
+  - localStorage: 'pv2026_progress' 쓰기 (quizPassed)
+  - staff/[role]/page.tsx: 역할 상세에서 진입
+
+
+────────────────────────────────────────────────────────────────────────────────
+[18] src/app/admin/layout.tsx
+────────────────────────────────────────────────────────────────────────────────
+파일명    : layout.tsx
+파일 위치 : D:\port-village-2026\src\app\admin\layout.tsx
+파일 역할 : 관리자 섹션(/admin/*) 공통 레이아웃
+
+주요 기능
+  - 관리자 페이지 전용 메타데이터
+  - 전체 화면 레이아웃 (모바일 너비 제한 없음)
+
+파일 내용 상세
+  export const metadata: Metadata
+    title: "관리자 운영 | 포트 빌리지 2026"
+
+  JSX 구조:
+    <div className="min-h-screen bg-[#0B1628]">
+      {children}
+    </div>
+    — 전체 화면 너비 (staff 레이아웃과 달리 max-w 제한 없음)
+
+다른 파일과의 연관관계
+  - admin/page.tsx의 부모 레이아웃
+
+
+────────────────────────────────────────────────────────────────────────────────
+[19] src/app/admin/page.tsx (관리자 메인)
+────────────────────────────────────────────────────────────────────────────────
+파일명    : page.tsx
+파일 위치 : D:\port-village-2026\src\app\admin\page.tsx
+파일 역할 : /admin 경로 — 5탭 관리자 대시보드 컨테이너
+
+주요 기능
+  - 활성 탭 상태 관리
+  - AdminNav와 탭 컴포넌트 조합
+
+파일 내용 상세
+  컴포넌트: AdminPage (Client Component)
+
+  타입(export):
+    AdminTab: "dashboard" | "map" | "staff" | "training" | "manual"
+    — AdminNav.tsx에서 import하여 사용
+
+  상태:
+    activeTab: AdminTab  — 현재 활성 탭 (기본값 "dashboard")
+
+  JSX 구조:
+    <main className="min-h-screen bg-navy-950">
+      <AdminNav activeTab={activeTab} onTabChange={setActiveTab} />
+      {activeTab === "dashboard" && <DashboardTab />}
+      {activeTab === "map"       && <MapTab />}
+      {activeTab === "staff"     && <StaffTab />}
+      {activeTab === "training"  && <TrainingTab />}
+      {activeTab === "manual"    && <ManualTab />}
+    </main>
+
+다른 파일과의 연관관계
+  - AdminNav.tsx: activeTab, onTabChange props 전달
+  - DashboardTab.tsx, MapTab.tsx, StaffTab.tsx, TrainingTab.tsx, ManualTab.tsx: 탭별 컴포넌트 렌더링
+
+
+────────────────────────────────────────────────────────────────────────────────
+[20] src/components/admin/AdminNav.tsx
+────────────────────────────────────────────────────────────────────────────────
+파일명    : AdminNav.tsx
+파일 위치 : D:\port-village-2026\src\components\admin\AdminNav.tsx
+파일 역할 : 관리자 대시보드 상단 고정 네비게이션 바
+
+주요 기능
+  - 5개 탭 간 전환
+  - 브랜드 로고 및 홈 링크
+  - 알림 버튼 표시
+
+파일 내용 상세
+  컴포넌트: AdminNav (Client Component)
+  props:
+    activeTab   : AdminTab
+    onTabChange : (tab: AdminTab) => void
+
+  탭 목록:
+    "dashboard" — LayoutDashboard 아이콘 "대시보드"
+    "map"       — Map 아이콘        "공간 도면"
+    "staff"     — Users 아이콘      "스태프 배치"
+    "training"  — GraduationCap 아이콘 "교육 현황"
+    "manual"    — BookOpen 아이콘   "운영 매뉴얼"
+
+  JSX 구조:
+    상단 바:
+      Anchor 아이콘 + "포트 빌리지 2026" + "관리자 시스템"
+      Bell 아이콘 버튼 (빨간 dot — 알림 존재 표시, 현재 클릭 핸들러 없음)
+      "← 홈" Next.js Link → /
+
+    탭 버튼 행:
+      각 버튼: 아이콘 + 레이블
+      활성 탭: border-b-2 border-amber-400 text-amber-400
+      비활성 탭: text-slate-400, 호버 시 text-slate-200
+
+  사용 아이콘: Anchor, Bell, LayoutDashboard, Map, Users, GraduationCap, BookOpen
+
+다른 파일과의 연관관계
+  - admin/page.tsx: AdminTab 타입 import + props 받음
+  - Next.js Link: / 경로 홈으로 이동
+
+
+────────────────────────────────────────────────────────────────────────────────
+[21] src/components/admin/DashboardTab.tsx
+────────────────────────────────────────────────────────────────────────────────
+파일명    : DashboardTab.tsx
+파일 위치 : D:\port-village-2026\src\components\admin\DashboardTab.tsx
+파일 역할 : 관리자 대시보드 탭 — 실시간 운영 현황 종합 뷰
+
+주요 기능
+  - Supabase Realtime으로 구역 혼잡도 실시간 업데이트
+  - 알림/경보 수신 및 해결 처리
+  - 운영 체크리스트 토글 (Supabase UPDATE)
+  - 타임라인 현재 이벤트 하이라이트
+
+파일 내용 상세
+  컴포넌트: DashboardTab (Client Component)
+  내부 컴포넌트: GraduationCap (커스텀 SVG 아이콘 — lucide 미포함이라 직접 구현)
+
+  상수:
+    CONGESTION_COLOR: Record<"low"|"medium"|"high"|"critical", { bar, text, badge, label }>
+      low:      초록 계열 (#10b981, bg-green-500/20)
+      medium:   앰버 계열 (#f59e0b, bg-amber-500/20)
+      high:     주황 계열 (#f97316, bg-orange-500/20)
+      critical: 빨강 계열 (#ef4444, bg-red-500/20)
+
+    FALLBACK_ZONES: ZoneCongestion[] — 6개 구역 Mock 데이터 (Supabase 미연결 시 사용)
+    FALLBACK_ALERTS: Alert[]         — 3개 기본 알림 (팝업존 위험 등)
+    FALLBACK_CHECKLIST: ChecklistItem[] — 8개 체크리스트 항목
+
+  상태:
+    zones        : ZoneCongestion[]  — 구역 혼잡도
+    alerts       : Alert[]           — 미해결 알림 목록
+    checklist    : ChecklistItem[]   — 운영 체크리스트
+    currentTime  : Date              — 실시간 시계 (1초 interval)
+    isConnected  : boolean           — Supabase 연결 여부
+
+  useEffect (데이터 로드 + Realtime):
+    1. Supabase zone_congestion 전체 SELECT → 성공 시 zones, isConnected=true
+       실패 시 FALLBACK_ZONES
+    2. Supabase alerts WHERE is_resolved=false ORDER BY created_at DESC SELECT
+    3. Supabase checklist_items ORDER BY display_order SELECT
+    4. Realtime 채널 "dashboard" 구독:
+       zone_congestion UPDATE → 해당 zone_id의 데이터 교체
+       alerts INSERT → 알림 목록 앞에 추가 (prepend)
+    5. 1초 타이머: setCurrentTime(new Date())
+    cleanup: removeChannel(channel), clearInterval(timer)
+
+  함수:
+    resolveAlert(id: string)
+      — 로컬 상태에서 해당 알림 제거 (DB 업데이트 없음)
+
+    toggleChecklist(id: string)
+      — 로컬 상태 is_done 토글
+      — Supabase checklist_items UPDATE SET is_done, done_by("관리자"), done_at(now)
+
+  UI 구성:
+    상단: 날짜/시간 (currentTime 포맷) + 연결 상태 배지
+          연결됨: 초록 "Realtime 연결됨", 미연결: 앰버 "데모 모드"
+
+    KPI 카드 4개:
+      총 스태프: 14명 (하드코딩)
+      교육 이수: 10 / 14 (하드코딩)
+      위험 구역: zones.filter(z => z.level === "critical").length
+      체크리스트: done / total (%)
+
+    구역 혼잡도 섹션 (좌측 2/3):
+      zones.map → 구역명 + 혼잡도 레이블 + 현재/수용 인원 + 컬러 바
+
+    알림 패널 (우측 1/3):
+      alerts.map → 유형 아이콘 + 메시지 + 시각 + X 버튼(resolveAlert)
+      빈 목록 시: "활성 알림 없음" 메시지
+
+    운영 타임라인:
+      TIMELINE_EVENTS 순회
+      현재 시각에 가장 가까운 이벤트: 앰버 강조 (isCurrentEvent 판별)
+      이벤트 유형별 아이콘/컬러
+
+    운영 체크리스트:
+      checklist.map → 카테고리 + 업무명 + 클릭 토글 (체크박스 스타일)
+      완료: 취소선 + 초록 체크
+
+  사용 아이콘: Bell, CheckCircle, XCircle, AlertTriangle, Clock, Users,
+               MapPin, TrendingUp, ChevronRight
+
+다른 파일과의 연관관계
+  - lib/supabase/client.ts: DB 쿼리 및 Realtime
+  - constants.ts: TIMELINE_EVENTS, ZONES
+  - types/index.ts: ZoneCongestion, Alert, ChecklistItem
+
+
+────────────────────────────────────────────────────────────────────────────────
+[22] src/components/admin/MapTab.tsx
+────────────────────────────────────────────────────────────────────────────────
+파일명    : MapTab.tsx
+파일 위치 : D:\port-village-2026\src\components\admin\MapTab.tsx
+파일 역할 : 관리자 — 행사장 SVG 인터랙티브 배치도
+
+주요 기능
+  - SVG로 구현한 행사장 구역 지도 (외부 라이브러리 없음)
+  - 구역 클릭 시 우측 상세 패널 표시
+  - 혼잡도 색상 기반 시각화
+
+파일 내용 상세
+  컴포넌트: MapTab (Client Component)
+
+  상수:
+    CORRECTED_PATHS: { id, name, path(SVG d속성), cx, cy }[]
+      6개 구역의 SVG path 좌표 (620×430 viewBox 기준)
+      cx, cy: 텍스트 레이블 중심 좌표
+      구역: A(메인 게이트), B(푸드코트), C(마켓 플레이스),
+             D(팝업 존), E(메인 스테이지), F(편의시설)
+
+    MOCK_ZONE_DATA: { [zoneId]: { current, capacity, level, role } }
+      6개 구역의 Mock 혼잡도 데이터
+      예: A — current 320, capacity 500, level "medium", role "entrance"
+
+    LEVEL_FILL, LEVEL_STROKE: Record<string, string>
+      혼잡도 레벨별 SVG fill/stroke 색상:
+      low:      fill #10b981/20, stroke #10b981
+      medium:   fill #f59e0b/20, stroke #f59e0b
+      high:     fill #f97316/30, stroke #f97316
+      critical: fill #ef4444/40, stroke #ef4444
+
+  상태:
+    selectedZone: string | null  — 클릭된 구역 ID
+
+  SVG 지도 (viewBox="0 0 620 430"):
+    defs:
+      pattern "grid": 30px 간격 그리드 (navy-700/30 색상)
+      filter "glow":  feGaussianBlur stdDeviation=3
+
+    배경: navy-900 사각형 + 그리드 패턴 오버레이
+    항구 웨이브: 하단 SVG 패스 (청록색 파도 2개)
+
+    구역 path 요소 (CORRECTED_PATHS.map):
+      fill: LEVEL_FILL[zone.level]
+      stroke: LEVEL_STROKE[zone.level]
+      선택된 구역: stroke-amber-400, strokeWidth 2, filter=url(#glow)
+      클릭: setSelectedZone(id) 토글
+
+    구역 텍스트 레이블 (cx, cy 기반):
+      구역 ID (예: "A"), 구역명 (예: "메인 게이트"), 현재/수용 인원
+
+    나침반 (우상단):
+      "N" 텍스트 + 화살표
+
+    범례 (좌하단):
+      low(초록)/medium(앰버)/high(주황)/critical(빨강) 4단계
+
+  우측 상세 패널 (w-80, selectedZone 있을 때 표시):
+    헤더: 구역 이름 + X 닫기 버튼
+
+    혼잡도 섹션:
+      혼잡도 레벨 배지
+      전체 너비 컬러 바 (현재/수용 인원 비율)
+      현재 인원 / 수용 인원
+
+    역할 정보:
+      ROLE_CONFIGS에서 해당 역할 찾아 아이콘 + 이름 표시
+
+    배치 스태프 (Mock 3명):
+      아바타(이름 첫 글자 원) + 이름 + 상태 ("근무중" 초록 dot)
+
+    critical 구역 시 경고 배너:
+      빨강 배경 + AlertTriangle + "입장통제팀 즉시 호출" 버튼
+
+    하단 버튼:
+      "상세 보기" — 현재 클릭 핸들러 없음 (향후 구현)
+      "알림 발송" — 현재 클릭 핸들러 없음 (향후 구현)
+
+  사용 아이콘: AlertTriangle, Users, X
+
+다른 파일과의 연관관계
+  - constants.ts: ZONES, ROLE_CONFIGS
+  - types/index.ts: ZoneCongestion
+  - Supabase 없음 (전체 Mock 데이터 사용)
+
+
+────────────────────────────────────────────────────────────────────────────────
+[23] src/components/admin/StaffTab.tsx
+────────────────────────────────────────────────────────────────────────────────
+파일명    : StaffTab.tsx
+파일 위치 : D:\port-village-2026\src\components\admin\StaffTab.tsx
+파일 역할 : 관리자 — 스태프 배치 탭, 역할/구역별 스태프 목록 관리
+
+주요 기능
+  - Supabase staff 테이블 데이터 로드 (없으면 FALLBACK 사용)
+  - 이름/연락처/구역 텍스트 검색
+  - 역할/교대 필터 적용
+  - 구역별 그룹 표시
+  - 현재 시각 기반 근무 중 상태 표시
+
+파일 내용 상세
+  컴포넌트: StaffTab (Client Component), 하위 컴포넌트 StaffRow
+
+  상수:
+    FALLBACK_STAFF: Staff[] — 14명 Mock 스태프 데이터
+      역할별 2~3명 (entrance 3, fnb 2, market 2, popup 2, stage 3, facility 2)
+      각 스태프: 이름, 연락처(010-xxxx-xxxx 형식), role, zone, shift_start/end
+      is_trained: true/false 혼합, quiz_score: 6~7 또는 null
+
+  상태:
+    staff      : Staff[]                  — 스태프 전체 목록
+    search     : string                   — 검색어
+    roleFilter : StaffRole | "all"        — 역할 필터
+    shiftFilter: "all" | "am" | "pm"      — 교대 필터
+
+  useEffect:
+    Supabase staff 테이블 SELECT * ORDER BY role
+    성공 시 staff 업데이트, 실패 시 FALLBACK_STAFF 사용
+
+  파생 데이터(useMemo 또는 인라인):
+    filtered:
+      검색어: name | zone | phone 포함 여부
+      roleFilter: staff.role === roleFilter (all 제외)
+      shiftFilter: am → shift_start < "12:00", pm → shift_start >= "12:00"
+
+    byZone: Record<string, Staff[]>
+      ZONES.map(zone => ({ zone, staff: filtered.filter(s => s.zone === zone.name) }))
+
+  StaffRow 컴포넌트:
+    props: staff: Staff, roleConfig: RoleConfig
+    파생 상태:
+      isOnShift: 현재 시각이 shift_start ~ shift_end 사이인지 여부
+    JSX:
+      아바타 원(이름[0]) — roleConfig.bgColor 배경
+      이름 + 구역
+      "근무중" 초록 배지 또는 "대기" 회색 배지
+      교대시간 텍스트
+      is_trained: CheckCircle(초록) 또는 XCircle(빨강)
+      quiz_score: 점수 텍스트 또는 "-"
+      Phone 아이콘 버튼 (tel: 링크)
+
+  UI 구성:
+    상단: 검색 입력 + 역할 드롭다운 + 교대 드롭다운 + 총원/필터결과 표시
+    구역별 섹션 (ZONES 순서):
+      구역 헤더: 구역명 + 역할 아이콘 + 스태프 수
+      StaffRow 목록
+      빈 구역: "배치된 스태프 없음" 메시지
+
+  사용 아이콘: Search, Filter, Users, Phone, CheckCircle, XCircle, MapPin
+
+다른 파일과의 연관관계
+  - lib/supabase/client.ts: staff SELECT
+  - constants.ts: ROLE_CONFIGS, ZONES
+  - types/index.ts: Staff, StaffRole, RoleConfig
+
+
+────────────────────────────────────────────────────────────────────────────────
+[24] src/components/admin/TrainingTab.tsx
+────────────────────────────────────────────────────────────────────────────────
+파일명    : TrainingTab.tsx
+파일 위치 : D:\port-village-2026\src\components\admin\TrainingTab.tsx
+파일 역할 : 관리자 — 교육 현황 탭, 스태프 교육 이수율 및 알림 발송
+
+주요 기능
+  - Supabase Realtime으로 교육 이수 상태 실시간 반영
+  - 미이수 스태프에게 개별/일괄 교육 독촉 알림 발송
+  - 역할별 이수율 바 차트
+
+파일 내용 상세
+  컴포넌트: TrainingTab (Client Component)
+
+  상수:
+    FALLBACK_STAFF: Staff[] — StaffTab과 동일한 14명 Mock 데이터
+      (quiz_completed_at 시각 일부 다름)
+
+  상태:
+    staff      : Staff[]
+    filter     : "all" | "trained" | "untrained"
+    roleFilter : StaffRole | "all"
+    notifying  : Set<string>   — 알림 발송 중인 스태프 ID 집합
+    notified   : Set<string>   — 이미 알림 발송된 스태프 ID 집합
+
+  useEffect:
+    Supabase staff SELECT
+    Realtime 채널 "training" 구독:
+      staff UPDATE → 해당 ID의 데이터 교체 (is_trained, quiz_score 갱신)
+    cleanup: removeChannel(channel)
+
+  함수:
+    sendNotification(staffId: string, staffName: string)
+      1. notifying에 staffId 추가
+      2. 1초 setTimeout (시뮬레이션)
+      3. Supabase training_notifications INSERT:
+         { staff_id: staffId, message: `${staffName}님, 교육을 완료해주세요.`, sent_at: now }
+      4. notifying에서 제거, notified에 추가
+
+    sendBulkNotification()
+      untrained 스태프 전체 순차 sendNotification 호출
+      (forEach + setTimeout 누적 딜레이로 순차 발송)
+
+  파생 데이터:
+    trained    : staff.filter(s => s.is_trained)
+    untrained  : staff.filter(s => !s.is_trained)
+    avgScore   : trained.reduce(합산) / trained.length (소수점 1자리)
+    filtered   : filter + roleFilter 복합 적용 결과
+    byRole     : Record<StaffRole, { total, trained }> — 역할별 이수율
+
+  UI 구성:
+    KPI 카드 4개:
+      총 스태프, 이수 완료(초록), 미이수(빨강), 평균 점수(앰버)
+
+    역할별 이수율 바:
+      byRole 순회 → 역할명 + 이수/전체 + 퍼센트 바
+      100%: 초록, 70%+: 앰버, 미만: 빨강
+
+    일괄 알림 버튼:
+      "미이수 전체 알림 발송" (untrained.length > 0 일 때 활성)
+
+    필터 그룹 + 역할 드롭다운
+
+    스태프 테이블:
+      이름, 역할, 구역, 이수여부(배지), 퀴즈점수, 완료일, 알림버튼
+      알림버튼:
+        notifying 중: "발송 중..." 비활성
+        notified:     "발송완료" 초록
+        기본:         "알림 발송" 활성 (미이수 스태프만)
+
+    미이수 경고 배너 (untrained.length > 0):
+      AlertTriangle + "X명의 스태프가 교육을 완료하지 않았습니다."
+
+  사용 아이콘: GraduationCap, Bell, CheckCircle, XCircle, AlertTriangle, Send
+
+다른 파일과의 연관관계
+  - lib/supabase/client.ts: staff SELECT, Realtime, training_notifications INSERT
+  - constants.ts: ROLE_CONFIGS
+  - types/index.ts: Staff, StaffRole
+
+
+────────────────────────────────────────────────────────────────────────────────
+[25] src/components/admin/ManualTab.tsx
+────────────────────────────────────────────────────────────────────────────────
+파일명    : ManualTab.tsx
+파일 위치 : D:\port-village-2026\src\components\admin\ManualTab.tsx
+파일 역할 : 관리자 — 운영 매뉴얼 탭, 돌발상황 시나리오 + 운영 절차 매뉴얼
+
+주요 기능
+  - 8개 돌발상황 시나리오 아코디언 뷰 (심각도별 색상 구분)
+  - 4개 운영 카테고리 매뉴얼 아코디언 뷰
+  - 비상 연락망 전체 그리드
+
+파일 내용 상세
+  컴포넌트: ManualTab (Client Component)
+
+  타입:
+    ScenarioCard:
+      id          : string
+      title       : string
+      description : string
+      severity    : "critical" | "high" | "medium" | "low"
+      steps       : string[]    — 대응 순서 목록
+      contacts    : string[]    — 연락해야 할 팀 목록
+
+  상수:
+    SCENARIOS: ScenarioCard[] — 8개 돌발상황:
+      화재(critical)   — 즉시 대피, 119, 방송팀 호출 등 6단계
+      의료응급(critical) — 의료팀 호출, AED 위치 안내 등 6단계
+      압사위험(critical) — 입장통제팀 호출, 구역 폐쇄 등 5단계
+      도난(high)        — 경비팀, 현장 보존 등 4단계
+      악천후(high)      — 안전 구역 안내, 방송 알림 등 5단계
+      정전(high)        — 비상전원 확인, 시설팀 호출 등 4단계
+      미아(medium)      — 안내소 이동, 방송 요청 등 4단계
+      폭력(medium)      — 경비팀, 거리 유지 등 4단계
+
+    OPERATION_MANUALS: { category, icon, items: { title, description }[] }[]
+      4개 카테고리:
+      입장 운영(DoorOpen 아이콘): 3개 항목 (사전입장/본 입장/퇴장)
+      F&B 운영(UtensilsCrossed): 3개 항목 (오픈준비/피크타임/재고관리)
+      안전 관리(Shield): 3개 항목 (구역별 배치/응급키트/비상연락)
+      커뮤니케이션(Radio): 3개 항목 (무전기운용/내부채널/보고체계)
+
+    SEVERITY_CONFIG: Record<severity, { color, bg, border, icon }>
+      critical: 빨강 계열, Flame 아이콘
+      high:     주황 계열, AlertTriangle 아이콘
+      medium:   앰버 계열, AlertCircle 아이콘
+      low:      파랑 계열, Info 아이콘
+
+  상태:
+    activeSection     : "scenarios" | "manual"  — 현재 섹션
+    expandedScenario  : string | null            — 펼쳐진 시나리오 ID
+    expandedManual    : string | null            — 펼쳐진 매뉴얼 카테고리
+
+  UI 구성:
+    섹션 토글 버튼:
+      "돌발상황 시나리오" (AlertTriangle 아이콘)
+      "운영 매뉴얼"       (BookOpen 아이콘)
+
+    시나리오 섹션:
+      즉시 연락처 5개 (운영본부#100/경비팀#103/보안/의료팀#102/시설팀#104):
+        Phone 아이콘 + 이름 + 내선 + tel: 링크 버튼
+
+      시나리오 카드 2열 그리드 (SCENARIOS.map):
+        카드 헤더: severity 아이콘 + 제목 + severity 배지 + 펼침 토글 버튼
+        펼쳐지면:
+          설명 텍스트
+          대응 순서 (번호 목록, 각 단계 앰버 번호)
+          관련 연락처 (Phone 아이콘 + 팀명)
+
+    매뉴얼 섹션:
+      OPERATION_MANUALS.map → 카테고리 아코디언:
+        헤더: 카테고리 아이콘 + 이름 + 항목 수 + 토글
+        펼쳐지면: 항목별 제목 + 설명 목록
+
+      전체 비상 연락망 그리드:
+        EMERGENCY_CONTACTS + { name: "119(소방)", ext: "119" } + { name: "112(경찰)", ext: "112" }
+        3열 그리드, Phone 아이콘 + 이름 + 번호
+
+  사용 아이콘: AlertTriangle, BookOpen, Flame, AlertCircle, Info, Phone,
+               Shield, ChevronDown, ChevronUp
+
+다른 파일과의 연관관계
+  - constants.ts: EMERGENCY_CONTACTS
+  - Supabase 없음 (완전 정적 데이터)
+
+
+================================================================================
+  Supabase DB 테이블 구조 (코드 기반 추론)
+================================================================================
+
+코드에서 직접 접근하는 테이블 6개:
+
+  zone_congestion
+    id            : uuid (PK)
+    zone_id       : text          — 구역 ID (A~F)
+    zone_name     : text          — 구역 한글명
+    current_count : integer       — 현재 인원
+    capacity      : integer       — 수용 인원
+    level         : text          — "low" | "medium" | "high" | "critical"
+    updated_at    : timestamptz
+    접근: DashboardTab.tsx (SELECT + Realtime UPDATE)
+
+  alerts
+    id          : uuid (PK)
+    type        : text          — "emergency" | "warning" | "info"
+    zone_id     : text (nullable)
+    message     : text
+    is_resolved : boolean
+    created_at  : timestamptz
+    resolved_at : timestamptz (nullable)
+    접근: DashboardTab.tsx (SELECT WHERE is_resolved=false + Realtime INSERT)
+
+  checklist_items
+    id           : uuid (PK)
+    category     : text
+    task         : text
+    is_done      : boolean
+    done_by      : text (nullable)
+    done_at      : timestamptz (nullable)
+    display_order: integer
+    접근: DashboardTab.tsx (SELECT + UPDATE)
+
+  staff
+    id                : uuid (PK)
+    name              : text
+    phone             : text
+    role              : text (StaffRole)
+    zone              : text
+    shift_start       : text (HH:mm)
+    shift_end         : text (HH:mm)
+    is_trained        : boolean
+    quiz_score        : integer (nullable)
+    quiz_completed_at : timestamptz (nullable)
+    created_at        : timestamptz
+    접근: StaffTab.tsx (SELECT), TrainingTab.tsx (SELECT + Realtime UPDATE)
+
+  quiz_results
+    id           : uuid (PK)
+    role         : text (StaffRole)
+    score        : integer
+    total        : integer
+    answers      : jsonb (QuizAnswer[])
+    completed_at : timestamptz
+    접근: quiz/page.tsx (INSERT)
+
+  training_notifications
+    id       : uuid (PK)
+    staff_id : uuid (FK → staff.id)
+    message  : text
+    sent_at  : timestamptz
+    접근: TrainingTab.tsx (INSERT)
+
+
+================================================================================
+  파일 간 연관관계 전체 요약
+================================================================================
+
+  [타입/데이터 기반]
+  types/index.ts        ←── import ── 모든 컴포넌트/페이지
+  lib/constants.ts      ←── import ── 모든 컴포넌트/페이지
+
+  [Supabase 클라이언트]
+  lib/supabase/client.ts ←── import ── DashboardTab.tsx
+                                        StaffTab.tsx
+                                        TrainingTab.tsx
+                                        staff/[role]/quiz/page.tsx
+
+  lib/supabase/server.ts  ── (향후 Server Component에서 사용 예정)
+
+  [레이아웃 계층]
+  app/layout.tsx (루트)
+    └── globals.css import
+    └── app/page.tsx (/)
+    └── app/staff/layout.tsx
+          └── app/staff/page.tsx (/staff)
+          └── app/staff/[role]/page.tsx (/staff/[role])
+          └── app/staff/[role]/quiz/page.tsx (/staff/[role]/quiz)
+    └── app/admin/layout.tsx
+          └── app/admin/page.tsx (/admin)
+                └── components/admin/AdminNav.tsx
+                └── components/admin/DashboardTab.tsx
+                └── components/admin/MapTab.tsx
+                └── components/admin/StaffTab.tsx
+                └── components/admin/TrainingTab.tsx
+                └── components/admin/ManualTab.tsx
+
+  [localStorage (pv2026_progress)]
+  staff/page.tsx          ── READ (역할별 learned, quizPassed)
+  staff/[role]/page.tsx   ── READ + WRITE (learned: true)
+  quiz/page.tsx           ── WRITE (quizPassed: score >= 5)
+
+  [Supabase Realtime 구독]
+  DashboardTab.tsx  ── "dashboard" 채널 (zone_congestion UPDATE, alerts INSERT)
+  TrainingTab.tsx   ── "training" 채널 (staff UPDATE)
+
+
+================================================================================
+  기술적 특이사항
+================================================================================
+
+  1. LocalStorage 기반 진행도 관리
+     스태프 학습/퀴즈 진행 상태를 DB 없이 브라우저 localStorage('pv2026_progress')에
+     JSON으로 저장. 별도 로그인 없이 역할 학습 추적. 기기 변경 시 초기화됨.
+
+  2. Fallback 데이터 패턴 (Graceful Degradation)
+     Supabase 미연결/환경변수 미설정 시 FALLBACK_* 상수로 자동 대체.
+     개발/데모 환경에서도 UI 완전 동작.
+
+  3. Realtime 구독 정리
+     DashboardTab, TrainingTab의 useEffect cleanup에서 supabase.removeChannel() 호출.
+     메모리 누수 방지.
+
+  4. 순수 SVG 지도
+     외부 지도 라이브러리 없이 SVG path로 행사장 배치도 구현.
+     MapTab(관리자): 620×430 viewBox, 구역 path 클릭 인터랙션
+     staff/[role]/page.tsx MapTab: 400×300 viewBox, 핫스팟 클릭 팝업
+
+  5. 360° 뷰어 플레이스홀더
+     Pannellum.js 연동 코드가 플레이스홀더 상태 (staff/[role]/page.tsx).
+     실제 360° 파노라마 이미지 업로드 후 활성화 필요.
+
+  6. PWA 준비
+     layout.tsx에 manifest: "/manifest.json" 참조.
+     파일은 public/ 폴더에 위치해야 함 (현재 확인 필요).
+     themeColor: "#0B1628" 적용됨.
+
+  7. recharts 미사용
+     package.json에 포함되어 있으나 현재 코드에서 미사용.
+     DashboardTab의 혼잡도 바 차트는 Tailwind CSS div로 구현.
+     향후 시계열 그래프 등 확장 시 사용 예정으로 추정.
+
+================================================================================
+  END OF PROJECT SUMMARY
+================================================================================

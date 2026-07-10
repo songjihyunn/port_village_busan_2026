@@ -1,0 +1,12 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "name": "supabase-port-village-2026",
+            "connectString": "postgresql://postgres.snorprzfnxeopgnqnnyo:Moda100609zxcv@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres"
+        }
+    ]
+}
