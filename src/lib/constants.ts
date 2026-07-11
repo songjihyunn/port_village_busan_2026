@@ -417,7 +417,7 @@ export const ZONES = [
   // 야외 본문 (좌→우)
   { id: "P1", name: "BTS THE CITY ARIRANG BUSAN", role: "popup" as const, capacity: 300, color: "#F5D400" },
   { id: "C2", name: "파도놀이터 (휴게 공간)", role: "stage" as const, capacity: 300, color: "#9aa0a8" },
-  { id: "FA5", name: "항구마을 우물(실외)", role: "facility" as const, capacity: 50, color: "#9aa0a8" },
+  { id: "FA5", name: "항구마을 우물(실외)", role: "facility" as const, capacity: 50, color: "#C040A0" },
   { id: "M3", name: "파도마당 (휴게 공간)", role: "market" as const, capacity: 500, color: "#9aa0a8" },
   { id: "F8", name: "부산고메셀렉션", role: "fnb" as const, capacity: 250, color: "#2B7FD4" },
   { id: "C3", name: "포트게더링", role: "stage" as const, capacity: 400, color: "#F08020" },

@@ -14,7 +14,6 @@ DROP TABLE IF EXISTS route_path_waypoints CASCADE;
 DROP TABLE IF EXISTS route_path_zones CASCADE;
 DROP TABLE IF EXISTS route_paths CASCADE;
 
--- ─── Staff Table ──────────────────────────────────
 CREATE TABLE IF NOT EXISTS staff (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -29,7 +28,6 @@ CREATE TABLE IF NOT EXISTS staff (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ─── Quiz Results Table ───────────────────────────
 CREATE TABLE IF NOT EXISTS quiz_results (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   staff_id uuid REFERENCES staff(id) ON DELETE CASCADE,
@@ -40,7 +38,6 @@ CREATE TABLE IF NOT EXISTS quiz_results (
   completed_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ─── Zone Congestion Table ────────────────────────
 CREATE TABLE IF NOT EXISTS zone_congestion (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   zone_id text NOT NULL UNIQUE,
@@ -53,7 +50,6 @@ CREATE TABLE IF NOT EXISTS zone_congestion (
   CHECK (current_count <= capacity)
 );
 
--- ─── Alerts Table ─────────────────────────────────
 CREATE TABLE IF NOT EXISTS alerts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   type text NOT NULL CHECK (type IN ('emergency','warning','info')),
@@ -64,7 +60,6 @@ CREATE TABLE IF NOT EXISTS alerts (
   resolved_at timestamptz
 );
 
--- ─── Training Notifications Table ─────────────────
 CREATE TABLE IF NOT EXISTS training_notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   staff_id uuid REFERENCES staff(id) ON DELETE CASCADE,
@@ -72,7 +67,6 @@ CREATE TABLE IF NOT EXISTS training_notifications (
   sent_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ─── Checklist Items Table ────────────────────────
 CREATE TABLE IF NOT EXISTS checklist_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   category text NOT NULL,
@@ -83,7 +77,6 @@ CREATE TABLE IF NOT EXISTS checklist_items (
   display_order integer NOT NULL DEFAULT 0
 );
 
--- ─── Route Data Tables (텍스트 동선) ──────────────
 CREATE TABLE IF NOT EXISTS route_data (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   role text NOT NULL CHECK (role IN ('entrance','fnb','market','popup','stage','facility')),
@@ -106,8 +99,6 @@ CREATE TABLE IF NOT EXISTS route_steps (
   step text NOT NULL
 );
 
--- ─── Route Path Tables (맵 시각화 동선) ──────────
--- 동선 레이어 (역할별, 순서별)
 CREATE TABLE IF NOT EXISTS route_paths (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   role text NOT NULL CHECK (role IN ('entrance','fnb','market','popup','stage','facility')),
@@ -116,16 +107,12 @@ CREATE TABLE IF NOT EXISTS route_paths (
   color text NOT NULL
 );
 
--- 동선 레이어별 하이라이트 구역
 CREATE TABLE IF NOT EXISTS route_path_zones (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   route_path_id uuid REFERENCES route_paths(id) ON DELETE CASCADE,
   zone_id text NOT NULL
 );
 
--- 동선 경로 좌표 (SVG viewBox 900x680 기준)
--- path_index: 같은 레이어 내 몇 번째 선인지
--- display_order: 선 안에서 몇 번째 경유점인지
 CREATE TABLE IF NOT EXISTS route_path_waypoints (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   route_path_id uuid REFERENCES route_paths(id) ON DELETE CASCADE,
@@ -293,11 +280,11 @@ WITH rd AS (
 ),
 ri AS (
   INSERT INTO route_items (route_data_id, display_order, name, note) VALUES
-    ((SELECT id FROM rd), 1, '스태프 출근 동선',                        '식재료 냉장 온도(5°C↓) 확인 후 오픈 준비'),
-    ((SELECT id FROM rd), 2, '식재료 입고 동선',                        '입고 시간: 오픈 2시간 전. 통로 차단 금지'),
-    ((SELECT id FROM rd), 3, '실내 식당가 동선 (F1·F2)',                'FA1 의무실 인접 — 응급 상황 즉시 연락'),
-    ((SELECT id FROM rd), 4, '야외 FOOD부스 동선 (F3·F4·F5·F6·F8)',    'FA3·FA4 분리수거존 인접 — 폐기물 2시간마다 처리'),
-    ((SELECT id FROM rd), 5, '비상 대피 동선',                          '화재 발생 시 즉시 시설팀(#103) 신고 후 대피')
+    ((SELECT id FROM rd), 1, '스태프 출근 동선',                     '식재료 냉장 온도(5°C↓) 확인 후 오픈 준비'),
+    ((SELECT id FROM rd), 2, '식재료 입고 동선',                     '입고 시간: 오픈 2시간 전. 통로 차단 금지'),
+    ((SELECT id FROM rd), 3, '실내 식당가 동선 (F1·F2)',             'FA1 의무실 인접 — 응급 상황 즉시 연락'),
+    ((SELECT id FROM rd), 4, '야외 FOOD부스 동선 (F3~F6·F8)',        'FA3·FA4 분리수거존 인접 — 폐기물 2시간마다 처리'),
+    ((SELECT id FROM rd), 5, '비상 대피 동선',                       '화재 발생 시 즉시 시설팀(#103) 신고 후 대피')
   RETURNING id, display_order
 )
 INSERT INTO route_steps (route_item_id, display_order, step) VALUES
@@ -310,9 +297,9 @@ INSERT INTO route_steps (route_item_id, display_order, step) VALUES
   ((SELECT id FROM ri WHERE display_order=3), 1, '실내 좌측 동문식당가 F1'),
   ((SELECT id FROM ri WHERE display_order=3), 2, '중앙 수중광장 C1 기준 좌우 배치'),
   ((SELECT id FROM ri WHERE display_order=3), 3, '실내 우측 서문식당가 F2'),
-  ((SELECT id FROM ri WHERE display_order=4), 1, 'F3 푸드트럭존 (좌단) → FA3 분리수거존(좌) 인접'),
+  ((SELECT id FROM ri WHERE display_order=4), 1, 'F3 푸드트럭존 (좌단)'),
   ((SELECT id FROM ri WHERE display_order=4), 2, 'F4 → E1 게이트 옆 → F5'),
-  ((SELECT id FROM ri WHERE display_order=4), 3, 'E2 게이트 옆 → F6(우단) → FA4 분리수거존(우) 인접'),
+  ((SELECT id FROM ri WHERE display_order=4), 3, 'E2 게이트 옆 → F6(우단)'),
   ((SELECT id FROM ri WHERE display_order=4), 4, 'F8 부산고메셀렉션 (야외 우측 별도)'),
   ((SELECT id FROM ri WHERE display_order=5), 1, '조리 기구 전원 차단'),
   ((SELECT id FROM ri WHERE display_order=5), 2, 'E1·E2·E3 통해 외부 이동'),
@@ -326,10 +313,10 @@ WITH rd AS (
 ),
 ri AS (
   INSERT INTO route_items (route_data_id, display_order, name, note) VALUES
-    ((SELECT id FROM rd), 1, '스태프 출근 동선',   '09:00 오픈 전 부스 셋업 및 상품 진열 완료'),
+    ((SELECT id FROM rd), 1, '스태프 출근 동선',       '09:00 오픈 전 부스 셋업 및 상품 진열 완료'),
     ((SELECT id FROM rd), 2, '실내 마켓 동선 (M1·M2)', 'FA1 의무실 중앙 기준 좌우 배치 — 문의 시 FA1로 안내'),
-    ((SELECT id FROM rd), 3, '재고 보충 동선',         '통로 차단 금지 — 45분 이내 처리'),
-    ((SELECT id FROM rd), 4, '비상 대피 동선',         NULL)
+    ((SELECT id FROM rd), 3, '재고 보충 동선',          '통로 차단 금지 — 45분 이내 처리'),
+    ((SELECT id FROM rd), 4, '비상 대피 동선',          NULL)
   RETURNING id, display_order
 )
 INSERT INTO route_steps (route_item_id, display_order, step) VALUES
@@ -349,7 +336,7 @@ INSERT INTO route_steps (route_item_id, display_order, step) VALUES
 -- popup
 WITH rd AS (
   INSERT INTO route_data (role, title, description) VALUES
-    ('popup', '팝업존 동선', 'BTS THE CITY 팝업 운영, 방문객 체험 흐름, 혼잡 분산 동선을 숙지하세요.')
+    ('popup', '팝업존 동선', 'BTS THE CITY 팝업 운영, 방문객 체험 흐름 동선을 숙지하세요.')
   RETURNING id
 ),
 ri AS (
@@ -378,10 +365,10 @@ WITH rd AS (
 ),
 ri AS (
   INSERT INTO route_items (route_data_id, display_order, name, note) VALUES
-    ((SELECT id FROM rd), 1, '스태프 출근 동선',  '07:00까지 배치 완료 — 안전 펜스·음향·조명 사전 점검'),
-    ((SELECT id FROM rd), 2, '수중광장 동선 (C1)', '수용 500명 — 400명 초과 시 입장 속도 조절'),
+    ((SELECT id FROM rd), 1, '스태프 출근 동선',    '07:00까지 배치 완료 — 안전 펜스·음향·조명 사전 점검'),
+    ((SELECT id FROM rd), 2, '수중광장 동선 (C1)',   '수용 500명 — 400명 초과 시 입장 속도 조절'),
     ((SELECT id FROM rd), 3, '포트게더링 동선 (C3)', '수용 250명 — 200명 이상 시 입장 통제'),
-    ((SELECT id FROM rd), 4, '비상 대피 동선',     '압사 위험 감지 즉시 운영본부(#101) 보고 — 공연 중단 요청')
+    ((SELECT id FROM rd), 4, '비상 대피 동선',       '압사 위험 감지 즉시 운영본부(#101) 보고 — 공연 중단 요청')
   RETURNING id, display_order
 )
 INSERT INTO route_steps (route_item_id, display_order, step) VALUES
@@ -401,42 +388,41 @@ INSERT INTO route_steps (route_item_id, display_order, step) VALUES
 -- facility
 WITH rd AS (
   INSERT INTO route_data (role, title, description) VALUES
-    ('facility', '편의시설 동선', '시설 순찰, 분리수거, 의무실·안내센터, 파도비우소 운영 동선을 숙지하세요.')
+    ('facility', '편의시설 동선', '시설 순찰, 의무실·안내센터, 파도비우소 운영 동선을 숙지하세요.')
   RETURNING id
 ),
 ri AS (
   INSERT INTO route_items (route_data_id, display_order, name, note) VALUES
     ((SELECT id FROM rd), 1, '스태프 출근 동선',     '08:00까지 AED·구급함·소모품 점검 완료'),
     ((SELECT id FROM rd), 2, '시설 순찰 경로',       '1시간 주기 순찰 — 이상 발견 시 즉시 시설팀(#103) 보고'),
-    ((SELECT id FROM rd), 3, '분리수거 처리 동선',   '식품 폐기물 2시간마다 처리 필수'),
-    ((SELECT id FROM rd), 4, '응급 의료 대응 동선',  '심정지 의심 시 119 신고 → AED 요청 → 즉시 CPR 시작'),
-    ((SELECT id FROM rd), 5, '비상 대피 동선',       NULL)
+    ((SELECT id FROM rd), 3, '응급 의료 대응 동선',  '심정지 의심 시 119 신고 → AED 요청 → 즉시 CPR 시작'),
+    ((SELECT id FROM rd), 4, '비상 대피 동선',       NULL)
   RETURNING id, display_order
 )
 INSERT INTO route_steps (route_item_id, display_order, step) VALUES
   ((SELECT id FROM ri WHERE display_order=1), 1, '외부 주차장 도착'),
-  ((SELECT id FROM ri WHERE display_order=1), 2, 'E3 옆 통로 진입'),
+  ((SELECT id FROM ri WHERE display_order=1), 2, 'E3 옆 통로 진입 후 E2 통과'),
   ((SELECT id FROM ri WHERE display_order=1), 3, 'FA1 의무실·주민자치센터 오픈 준비'),
   ((SELECT id FROM ri WHERE display_order=2), 1, 'FA1 실내 중앙 출발'),
   ((SELECT id FROM ri WHERE display_order=2), 2, 'FA2 파도비우소 점검 (실내 우측 독립)'),
-  ((SELECT id FROM ri WHERE display_order=2), 3, 'FA3 분리수거존(좌) 확인 (FOOD부스줄 좌단)'),
-  ((SELECT id FROM ri WHERE display_order=2), 4, 'FA4 분리수거존(우) 확인 (FOOD부스줄 우단)'),
-  ((SELECT id FROM ri WHERE display_order=2), 5, 'FA5 항구마을우물 확인 (야외)'),
-  ((SELECT id FROM ri WHERE display_order=2), 6, 'FA1 복귀'),
-  ((SELECT id FROM ri WHERE display_order=3), 1, 'FA3(좌)·FA4(우) 분리수거존 수거'),
-  ((SELECT id FROM ri WHERE display_order=3), 2, 'E3 옆 서비스 통로 이동'),
-  ((SELECT id FROM ri WHERE display_order=3), 3, '외부 폐기물 수거 구역 반출'),
-  ((SELECT id FROM ri WHERE display_order=4), 1, '사고 현장 응급처치 (AED·CPR)'),
-  ((SELECT id FROM ri WHERE display_order=4), 2, 'FA1 의무실로 이송 또는 현장 처치'),
-  ((SELECT id FROM ri WHERE display_order=4), 3, 'E3 입구 앞 구급차 대기 동선 확보'),
-  ((SELECT id FROM ri WHERE display_order=5), 1, 'FA1·FA2 시설 마감'),
-  ((SELECT id FROM ri WHERE display_order=5), 2, '관람객 취약자(노약자·어린이) 우선 유도'),
-  ((SELECT id FROM ri WHERE display_order=5), 3, 'E3 통해 부두 외부 광장 집결');
+  ((SELECT id FROM ri WHERE display_order=2), 3, 'E2 통과 후 야외 FA5 항구마을우물 확인'),
+  ((SELECT id FROM ri WHERE display_order=2), 4, 'FA1 복귀'),
+  ((SELECT id FROM ri WHERE display_order=3), 1, '사고 현장 응급처치 (AED·CPR)'),
+  ((SELECT id FROM ri WHERE display_order=3), 2, 'FA1 의무실로 이송 또는 현장 처치'),
+  ((SELECT id FROM ri WHERE display_order=3), 3, 'E3 입구 앞 구급차 대기 동선 확보'),
+  ((SELECT id FROM ri WHERE display_order=4), 1, 'FA1·FA2 시설 마감'),
+  ((SELECT id FROM ri WHERE display_order=4), 2, '관람객 취약자(노약자·어린이) 우선 유도'),
+  ((SELECT id FROM ri WHERE display_order=4), 3, 'E2 통과 후 E3 통해 부두 외부 광장 집결');
 
 -- =====================================================
--- Seed: Route Paths (벽면 도착 | 글자 안 가림)
--- =====================================================
--- 화살표는 구역 벽면에서 멈춤 (구역 안 진입 없음)
+-- Seed: Route Paths
+-- 좌표 기준 (SVG 900x680)
+-- 실내 상단 y=46~189 / 실내 하단 y=193~336
+-- FA2 x=730~890 y=40~340 (실내 우측 독립)
+-- FOOD줄 y=372~416
+-- 야외 y=430~650
+-- E1: x=180~260 cx=220 / E2: x=560~640 cx=600 / E3: x=825~865
+-- 실내↔야외 이동은 반드시 E1 또는 E2 통과
 -- =====================================================
 DELETE FROM route_path_waypoints;
 DELETE FROM route_path_zones;
@@ -444,11 +430,11 @@ DELETE FROM route_paths;
 
 -- ENTRANCE
 INSERT INTO route_paths (role, display_order, label, color) VALUES
-  ('entrance', 1, '스태프 출근', '#facc15'),
-  ('entrance', 2, '관람객 입장', '#60a5fa'),
+  ('entrance', 1, '스태프 출근',    '#facc15'),
+  ('entrance', 2, '관람객 입장',    '#60a5fa'),
   ('entrance', 3, 'E1·E2 내부이동', '#34d399'),
-  ('entrance', 4, 'E3 혼잡 대응', '#fb923c'),
-  ('entrance', 5, '비상 대피', '#f87171');
+  ('entrance', 4, 'E3 혼잡 대응',   '#fb923c'),
+  ('entrance', 5, '비상 대피',      '#f87171');
 
 INSERT INTO route_path_zones (route_path_id, zone_id)
 SELECT rp.id, z.zone_id FROM route_paths rp
@@ -474,65 +460,46 @@ WHERE rp.role = 'entrance' AND rp.display_order = 5;
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 825, 394),
-  (0, 2, 260, 394),
-  (1, 0, 825, 540),
-  (1, 1, 825, 394),
-  (1, 2, 640, 394)
+  (0, 0, 825, 540), (0, 1, 825, 394), (0, 2, 260, 394),
+  (1, 0, 825, 540), (1, 1, 825, 394), (1, 2, 640, 394)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'entrance' AND rp.display_order = 1;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 825, 394),
-  (0, 2, 260, 394),
-  (1, 0, 825, 540),
-  (1, 1, 825, 394),
-  (1, 2, 640, 394),
-  (2, 0, 260, 394),
-  (2, 1, 260, 372),
-  (2, 2, 220, 372),
-  (2, 3, 220, 189),
-  (3, 0, 640, 394),
-  (3, 1, 640, 372),
-  (3, 2, 600, 372),
-  (3, 3, 600, 189)
+  (0, 0, 825, 540), (0, 1, 825, 394), (0, 2, 260, 394),
+  (1, 0, 825, 540), (1, 1, 825, 394), (1, 2, 640, 394),
+  (2, 0, 260, 394), (2, 1, 260, 372), (2, 2, 220, 372), (2, 3, 220, 189),
+  (3, 0, 640, 394), (3, 1, 640, 372), (3, 2, 600, 372), (3, 3, 600, 189)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'entrance' AND rp.display_order = 2;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 215, 372),
-  (0, 1, 215, 336),
-  (1, 0, 225, 372),
-  (1, 1, 225, 189),
-  (2, 0, 595, 372),
-  (2, 1, 595, 336),
-  (3, 0, 605, 372),
-  (3, 1, 605, 189)
+  (0, 0, 215, 372), (0, 1, 215, 336),
+  (1, 0, 225, 372), (1, 1, 225, 189),
+  (2, 0, 595, 372), (2, 1, 595, 336),
+  (3, 0, 605, 372), (3, 1, 605, 189)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'entrance' AND rp.display_order = 3;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 260, 394),
-  (0, 1, 825, 394),
-  (0, 2, 825, 540),
-  (1, 0, 640, 394),
-  (1, 1, 825, 394),
-  (1, 2, 825, 540)
+  (0, 0, 260, 394), (0, 1, 825, 394), (0, 2, 825, 540),
+  (1, 0, 640, 394), (1, 1, 825, 394), (1, 2, 825, 540)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'entrance' AND rp.display_order = 5;
 
 -- FNB
 INSERT INTO route_paths (role, display_order, label, color) VALUES
-  ('fnb', 1, '스태프 출근', '#facc15'),
-  ('fnb', 2, '식재료 입고', '#60a5fa'),
-  ('fnb', 3, '실내 식당가', '#34d399'),
+  ('fnb', 1, '스태프 출근',   '#facc15'),
+  ('fnb', 2, '식재료 입고',   '#60a5fa'),
+  ('fnb', 3, '실내 식당가',   '#34d399'),
   ('fnb', 4, '야외 FOOD부스', '#fb923c'),
-  ('fnb', 5, '비상 대피', '#f87171');
+  ('fnb', 5, '비상 대피',     '#f87171');
 
 INSERT INTO route_path_zones (route_path_id, zone_id)
 SELECT rp.id, z.zone_id FROM route_paths rp
@@ -558,84 +525,54 @@ WHERE rp.role = 'fnb' AND rp.display_order = 5;
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 825, 394),
-  (0, 2, 100, 394),
-  (1, 0, 825, 540),
-  (1, 1, 825, 394),
-  (1, 2, 260, 394),
-  (1, 3, 220, 394),
-  (1, 4, 220, 372),
-  (1, 5, 128, 372),
-  (1, 6, 128, 189),
-  (2, 0, 825, 540),
-  (2, 1, 825, 394),
-  (2, 2, 640, 394),
-  (2, 3, 600, 394),
-  (2, 4, 600, 372),
-  (2, 5, 592, 372),
-  (2, 6, 592, 189),
-  (3, 0, 825, 540),
-  (3, 1, 680, 540),
-  (3, 2, 680, 430)
+  (0, 0, 825, 540), (0, 1, 825, 394), (0, 2, 100, 394),
+  (1, 0, 825, 540), (1, 1, 825, 394), (1, 2, 260, 394), (1, 3, 220, 394), (1, 4, 220, 372), (1, 5, 128, 372), (1, 6, 128, 189),
+  (2, 0, 825, 540), (2, 1, 825, 394), (2, 2, 640, 394), (2, 3, 600, 394), (2, 4, 600, 372), (2, 5, 592, 372), (2, 6, 592, 189),
+  (3, 0, 825, 540), (3, 1, 680, 540), (3, 2, 680, 430)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'fnb' AND rp.display_order = 1;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 825, 394),
-  (0, 2, 100, 394),
-  (1, 0, 100, 394),
-  (1, 1, 100, 394),
-  (2, 0, 180, 394),
-  (2, 1, 260, 394),
-  (3, 0, 560, 394),
-  (3, 1, 640, 394)
+  (0, 0, 825, 540), (0, 1, 825, 394), (0, 2, 100, 394),
+  (1, 0, 100, 394), (1, 1, 180, 394),
+  (2, 0, 180, 394), (2, 1, 260, 394),
+  (3, 0, 560, 394), (3, 1, 640, 394)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'fnb' AND rp.display_order = 2;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 238, 108),
-  (0, 1, 482, 108),
-  (1, 0, 482, 140),
-  (1, 1, 238, 140)
+  (0, 0, 238, 108), (0, 1, 482, 108),
+  (1, 0, 482, 132), (1, 1, 238, 132)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'fnb' AND rp.display_order = 3;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
- (0, 0, 20, 394),
-  (0, 1, 880, 394)
+  (0, 0, 20, 394), (0, 1, 880, 394)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'fnb' AND rp.display_order = 4;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 128, 189),
-  (0, 1, 128, 394),
-  (0, 2, 825, 394),
-  (0, 3, 825, 540),
-  (1, 0, 592, 189),
-  (1, 1, 592, 394),
-  (1, 2, 825, 394),
-  (1, 3, 825, 540),
-  (2, 0, 20, 394),
-  (2, 1, 825, 394),
-  (2, 2, 825, 540),
-  (3, 0, 680, 430),
-  (3, 1, 680, 540),
-  (3, 2, 825, 540)
+  (0, 0, 128, 189), (0, 1, 128, 394), (0, 2, 825, 394), (0, 3, 825, 540),
+  (1, 0, 592, 189), (1, 1, 592, 394), (1, 2, 825, 394), (1, 3, 825, 540),
+  (2, 0, 20,  394), (2, 1, 825, 394), (2, 2, 825, 540),
+  (3, 0, 680, 430), (3, 1, 680, 540), (3, 2, 825, 540)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'fnb' AND rp.display_order = 5;
 
 -- MARKET
 INSERT INTO route_paths (role, display_order, label, color) VALUES
   ('market', 1, '스태프 출근', '#facc15'),
-  ('market', 2, '실내 마켓', '#34d399'),
-  ('market', 3, '재고 보충', '#fb923c'),
-  ('market', 4, '비상 대피', '#f87171');
+  ('market', 2, '실내 마켓',   '#34d399'),
+  ('market', 3, '재고 보충',   '#fb923c'),
+  ('market', 4, '비상 대피',   '#f87171');
 
 INSERT INTO route_path_zones (route_path_id, zone_id)
 SELECT rp.id, z.zone_id FROM route_paths rp
@@ -643,7 +580,7 @@ CROSS JOIN (VALUES ('E3'), ('M1'), ('M2')) AS z(zone_id)
 WHERE rp.role = 'market' AND rp.display_order = 1;
 INSERT INTO route_path_zones (route_path_id, zone_id)
 SELECT rp.id, z.zone_id FROM route_paths rp
-CROSS JOIN (VALUES ('M1'),('M2')) AS z(zone_id)
+CROSS JOIN (VALUES ('M1'), ('M2')) AS z(zone_id)
 WHERE rp.role = 'market' AND rp.display_order = 2;
 INSERT INTO route_path_zones (route_path_id, zone_id)
 SELECT rp.id, z.zone_id FROM route_paths rp
@@ -654,60 +591,47 @@ SELECT rp.id, z.zone_id FROM route_paths rp
 CROSS JOIN (VALUES ('M1'), ('M2'), ('E1'), ('E2'), ('E3')) AS z(zone_id)
 WHERE rp.role = 'market' AND rp.display_order = 4;
 
+-- market waypoints: E3→FOOD줄→E1/E2 통과→실내 M1/M2
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 825, 430),
-  (0, 1, 825, 394),
-  (0, 2, 220, 394),
-  (0, 3, 220, 336),
-  (1, 0, 825, 430),
-  (1, 1, 825, 394),
-  (1, 2, 600, 394),
-  (1, 3, 600, 336)
+  -- E3→E1 통과→M1
+  (0, 0, 825, 416), (0, 1, 220, 416), (0, 2, 220, 372), (0, 3, 220, 336), (0, 4, 18, 336),
+  -- E3→E2 통과→M2
+  (1, 0, 825, 416), (1, 1, 600, 416), (1, 2, 600, 372), (1, 3, 600, 336), (1, 4, 702, 336)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'market' AND rp.display_order = 1;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 238, 258),
-  (0, 1, 482, 258),
-  (1, 0, 482, 272),
-  (1, 1, 238, 272)
+  (0, 0, 238, 258), (0, 1, 482, 258),
+  (1, 0, 482, 272), (1, 1, 238, 272)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'market' AND rp.display_order = 2;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 220, 540),
-  (0, 2, 220, 336),
-  (0, 3, 238, 336),
-  (1, 0, 825, 540),
-  (1, 1, 600, 540),
-  (1, 2, 600, 336),
-  (1, 3, 482, 336)
+  (0, 0, 825, 416), (0, 1, 220, 416), (0, 2, 220, 372), (0, 3, 220, 336), (0, 4, 18, 336),
+  (1, 0, 825, 416), (1, 1, 600, 416), (1, 2, 600, 372), (1, 3, 600, 336), (1, 4, 702, 336)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'market' AND rp.display_order = 3;
+
+-- market 비상대피: M1→E1 통과→E3, M2→E2 통과→E3
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 238, 265),
-  (0, 1, 238, 394),
-  (0, 2, 825, 394),
-  (0, 3, 825, 540),
-  (1, 0, 482, 265),
-  (1, 1, 482, 394),
-  (1, 2, 825, 394),
-  (1, 3, 825, 540)
+  (0, 0, 18, 336), (0, 1, 220, 336), (0, 2, 220, 372), (0, 3, 220, 416), (0, 4, 825, 416), (0, 5, 825, 540),
+  (1, 0, 702, 336), (1, 1, 600, 336), (1, 2, 600, 372), (1, 3, 600, 416), (1, 4, 825, 416), (1, 5, 825, 540)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'market' AND rp.display_order = 4;
 
 -- POPUP
 INSERT INTO route_paths (role, display_order, label, color) VALUES
-  ('popup', 1, '스태프 출근', '#facc15'),
-  ('popup', 2, '방문객 체험', '#60a5fa'),
-  ('popup', 3, '비상 대피', '#f87171');
+  ('popup', 1, '스태프 출근',  '#facc15'),
+  ('popup', 2, '방문객 체험',  '#60a5fa'),
+  ('popup', 3, '비상 대피',    '#f87171');
 
 INSERT INTO route_path_zones (route_path_id, zone_id)
 SELECT rp.id, z.zone_id FROM route_paths rp
@@ -724,32 +648,23 @@ WHERE rp.role = 'popup' AND rp.display_order = 3;
 
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
-CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 220, 540)
-) AS w(pi, di, x, y)
+CROSS JOIN (VALUES (0, 0, 825, 540), (0, 1, 220, 540)) AS w(pi, di, x, y)
 WHERE rp.role = 'popup' AND rp.display_order = 1;
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
-CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 220, 540)
-) AS w(pi, di, x, y)
+CROSS JOIN (VALUES (0, 0, 825, 540), (0, 1, 220, 540)) AS w(pi, di, x, y)
 WHERE rp.role = 'popup' AND rp.display_order = 2;
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
-CROSS JOIN (VALUES
-  (0, 0, 220, 540),
-  (0, 1, 825, 540)
-) AS w(pi, di, x, y)
+CROSS JOIN (VALUES (0, 0, 220, 540), (0, 1, 825, 540)) AS w(pi, di, x, y)
 WHERE rp.role = 'popup' AND rp.display_order = 3;
 
 -- STAGE
 INSERT INTO route_paths (role, display_order, label, color) VALUES
-  ('stage', 1, '스태프 출근', '#facc15'),
-  ('stage', 2, '수중광장 C1', '#60a5fa'),
+  ('stage', 1, '스태프 출근',   '#facc15'),
+  ('stage', 2, '수중광장 C1',   '#60a5fa'),
   ('stage', 3, '포트게더링 C3', '#fb923c'),
-  ('stage', 4, '비상 대피', '#f87171');
+  ('stage', 4, '비상 대피',     '#f87171');
 
 INSERT INTO route_path_zones (route_path_id, zone_id)
 SELECT rp.id, z.zone_id FROM route_paths rp
@@ -768,56 +683,46 @@ SELECT rp.id, z.zone_id FROM route_paths rp
 CROSS JOIN (VALUES ('C1'), ('C3'), ('E1'), ('E2'), ('E3')) AS z(zone_id)
 WHERE rp.role = 'stage' AND rp.display_order = 4;
 
+-- stage waypoints
+-- 스태프 출근: E3→C3(야외), E3→E1 통과→C1 왼쪽벽(x=248, 실내 상단)
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 815, 540),
-  (1, 0, 825, 540),
-  (1, 1, 825, 394),
-  (1, 2, 360, 394),
-  (1, 3, 360, 189)
+  (0, 0, 825, 540), (0, 1, 815, 540),
+  (1, 0, 825, 416), (1, 1, 220, 416), (1, 2, 220, 372), (1, 3, 220, 189), (1, 4, 248, 189)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'stage' AND rp.display_order = 1;
+
+-- 수중광장 C1: C1 양쪽→E1/E2로 퇴장 유도
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 248, 118),
-  (0, 1, 248, 394),
-  (0, 2, 260, 394),
-  (1, 0, 472, 118),
-  (1, 1, 472, 394),
-  (1, 2, 560, 394)
+  (0, 0, 248, 118), (0, 1, 248, 372), (0, 2, 260, 372),
+  (1, 0, 472, 118), (1, 1, 472, 372), (1, 2, 560, 372)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'stage' AND rp.display_order = 2;
+
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
-CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 815, 540)
-) AS w(pi, di, x, y)
+CROSS JOIN (VALUES (0, 0, 825, 540), (0, 1, 815, 540)) AS w(pi, di, x, y)
 WHERE rp.role = 'stage' AND rp.display_order = 3;
+
+-- 비상 대피: C1→E1/E2 통과→야외, C3→E3
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 248, 118),
-  (0, 1, 248, 394),
-  (0, 2, 260, 394),
-  (1, 0, 472, 118),
-  (1, 1, 472, 394),
-  (1, 2, 560, 394),
-  (2, 0, 815, 540),
-  (2, 1, 825, 540)
+  (0, 0, 248, 118), (0, 1, 248, 372), (0, 2, 220, 372), (0, 3, 220, 416), (0, 4, 20, 416),
+  (1, 0, 472, 118), (1, 1, 472, 372), (1, 2, 600, 372), (1, 3, 600, 416), (1, 4, 825, 416), (1, 5, 825, 540),
+  (2, 0, 815, 540), (2, 1, 825, 540)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'stage' AND rp.display_order = 4;
 
 -- FACILITY
 INSERT INTO route_paths (role, display_order, label, color) VALUES
   ('facility', 1, '스태프 출근', '#facc15'),
-  ('facility', 2, '시설 순찰', '#60a5fa'),
-  ('facility', 3, '분리수거', '#34d399'),
-  ('facility', 4, '응급 의료', '#fb923c'),
-  ('facility', 5, '비상 대피', '#f87171');
+  ('facility', 2, '시설 순찰',   '#60a5fa'),
+  ('facility', 3, '응급 의료',   '#fb923c'),
+  ('facility', 4, '비상 대피',   '#f87171');
 
 INSERT INTO route_path_zones (route_path_id, zone_id)
 SELECT rp.id, z.zone_id FROM route_paths rp
@@ -833,62 +738,88 @@ CROSS JOIN (VALUES ('FA1'), ('E3')) AS z(zone_id)
 WHERE rp.role = 'facility' AND rp.display_order = 3;
 INSERT INTO route_path_zones (route_path_id, zone_id)
 SELECT rp.id, z.zone_id FROM route_paths rp
-CROSS JOIN (VALUES ('FA1'), ('E3')) AS z(zone_id)
-WHERE rp.role = 'facility' AND rp.display_order = 4;
-INSERT INTO route_path_zones (route_path_id, zone_id)
-SELECT rp.id, z.zone_id FROM route_paths rp
 CROSS JOIN (VALUES ('FA1'), ('FA2'), ('FA5'), ('E3')) AS z(zone_id)
-WHERE rp.role = 'facility' AND rp.display_order = 5;
+WHERE rp.role = 'facility' AND rp.display_order = 4;
 
+-- 스태프 출근: E3→E2 통과→실내 M2 cy→FA1
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 825, 540),
-  (0, 1, 825, 265),
-  (0, 2, 472, 265)
+  (0, 0, 825, 416), (0, 1, 600, 416), (0, 2, 600, 372), (0, 3, 600, 336), (0, 4, 472, 336), (0, 5, 472, 265)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'facility' AND rp.display_order = 1;
+
+-- 시설 순찰: FA1→FA2(실내 수평), FA2→FA1 복귀, FA1→E2통과→야외→FA5
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 472, 265),
-  (0, 1, 730, 190),
-  (1, 0, 730, 190),
-  (1, 1, 472, 265),
-  (2, 0, 472, 265),
-  (2, 1, 472, 540),
-  (2, 2, 380, 540)
+(0, 0, 472, 265), (0, 1, 472, 336), (0, 2, 600, 336), (0, 3, 600, 416), (0, 4, 890, 416), (0, 5, 890, 340),
+  (1, 0, 890, 340), (1, 1, 890, 416), (1, 2, 600, 416), (1, 3, 600, 336), (1, 4, 472, 336), (1, 5, 472, 265),
+  (2, 0, 472, 265), (2, 1, 472, 336), (2, 2, 600, 336), (2, 3, 600, 416), (2, 4, 425, 416), (2, 5, 425, 475)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'facility' AND rp.display_order = 2;
+
+-- 응급 의료: FA1→E2 통과→E3
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 472, 265),
-  (0, 1, 472, 540),
-  (0, 2, 825, 540)
+  (0, 0, 472, 265), (0, 1, 472, 336), (0, 2, 600, 336), (0, 3, 600, 372), (0, 4, 600, 416), (0, 5, 825, 416), (0, 6, 825, 540)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'facility' AND rp.display_order = 3;
+
+-- 비상 대피: FA1→E2→E3, FA2→E2→E3, FA5→E3
 INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
 SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
 CROSS JOIN (VALUES
-  (0, 0, 472, 265),
-  (0, 1, 472, 540),
-  (0, 2, 825, 540)
+(0, 0, 472, 265), (0, 1, 472, 336), (0, 2, 600, 336), (0, 3, 600, 416), (0, 4, 825, 416), (0, 5, 825, 540),
+  (1, 0, 890, 340), (1, 1, 890, 430), (1, 2, 825, 430), (1, 3, 825, 540),
+  (2, 0, 425, 475), (2, 1, 825, 475), (2, 2, 825, 540)
 ) AS w(pi, di, x, y)
 WHERE rp.role = 'facility' AND rp.display_order = 4;
-INSERT INTO route_path_waypoints (route_path_id, path_index, display_order, x, y)
-SELECT rp.id, w.pi, w.di, w.x, w.y FROM route_paths rp
-CROSS JOIN (VALUES
-  (0, 0, 472, 265),
-  (0, 1, 472, 540),
-  (0, 2, 825, 540),
-  (1, 0, 730, 190),
-  (1, 1, 730, 540),
-  (1, 2, 825, 540),
-  (2, 0, 470, 540),
-  (2, 1, 825, 540)
-) AS w(pi, di, x, y)
-WHERE rp.role = 'facility' AND rp.display_order = 5;
 
 -- =====================================================
 -- RLS Policies
+-- =====================================================
+ALTER TABLE staff                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quiz_results           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE zone_congestion        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alerts                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE training_notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE checklist_items        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_data             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_items            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_steps            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_paths            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_path_zones       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_path_waypoints   ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "allow_all_staff"         ON staff               FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_quiz"          ON quiz_results        FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_congestion"    ON zone_congestion     FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_alerts"        ON alerts              FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_notifications" ON training_notifications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_checklist"     ON checklist_items     FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_route_data"    ON route_data          FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_route_items"   ON route_items         FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_route_steps"   ON route_steps         FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_route_paths"   ON route_paths         FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_route_zones"   ON route_path_zones    FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_route_wpts"    ON route_path_waypoints FOR ALL USING (true) WITH CHECK (true);
+
+CREATE OR REPLACE FUNCTION update_congestion_level()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.level := CASE
+    WHEN NEW.current_count::float / NEW.capacity >= 0.9 THEN 'critical'
+    WHEN NEW.current_count::float / NEW.capacity >= 0.7 THEN 'high'
+    WHEN NEW.current_count::float / NEW.capacity >= 0.4 THEN 'medium'
+    ELSE 'low'
+  END;
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER congestion_level_trigger
+  BEFORE INSERT OR UPDATE ON zone_congestion
+  FOR EACH ROW EXECUTE FUNCTION update_congestion_level();
