@@ -9,7 +9,7 @@
 Vercel 배포 완료. (실제 운영 사용 여부는 미확인 — 이 문장 꼭 넣기)
 
 ## 라이브 데모
-[Vercel 링크]
+[https://port-village-busan-2026.vercel.app]
 
 ## 주요 기능
 - SVG 기반 인터랙티브 실내 지도 (23개 구역)
