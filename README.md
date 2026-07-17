@@ -88,4 +88,7 @@ supabase/
 - (리팩토링 하면) RoleDetailPage.tsx 900줄 → 분리 과정
 
 ## 스크린샷
-[이미지 3~5장]
+<img width="2428" height="5637" alt="1000002145" src="https://github.com/user-attachments/assets/b5acc269-8dd8-4825-9be4-5f2603a66f66" />
+<img width="2800" height="1352" alt="1000002146" src="https://github.com/user-attachments/assets/7ceaf2a6-0c5e-4356-8995-3cacf144c8c3" />
+<img width="2800" height="1373" alt="1000002144" src="https://github.com/user-attachments/assets/2f668ed9-b754-415d-a5f1-39300a6228fb" />
+
