@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 포트빌리지 부산 2026 - 스태프 운영 시스템
 
-## Getting Started
+## 개요
+2026년 부산항 일대 4,300평, 23개 구역에서 진행된 
+대규모 페스티벌을 위한 스태프 운영 웹 애플리케이션.
+50명 스태프, 6개 역할군(입장/F&B/마켓/팝업/무대/시설) 대상.
 
-First, run the development server:
+※ 미래내일 일경험 프로젝트형 프로그램의 결과물로 개발, 
+Vercel 배포 완료. (실제 운영 사용 여부는 미확인 — 이 문장 꼭 넣기)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 라이브 데모
+[Vercel 링크]
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 주요 기능
+- SVG 기반 인터랙티브 실내 지도 (23개 구역)
+- 실시간 혼잡도 대시보드 (4단계 임계값, PostgreSQL 트리거)
+- Three.js 360도 파노라마 뷰어 (구역별)
+- 정규화된 동선 데이터 스키마
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 기술 스택
+Next.js / TypeScript / Supabase (PostgreSQL) / Three.js / Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 아키텍처
+[스키마 다이어그램 또는 폴더 구조 트리]
 
-## Learn More
+## 트러블슈팅
+- Supabase 중첩 쿼리 에러 해결 과정
+- SVG 좌표 정렬 이슈
+- (리팩토링 하면) RoleDetailPage.tsx 900줄 → 분리 과정
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 스크린샷
+[이미지 3~5장]
